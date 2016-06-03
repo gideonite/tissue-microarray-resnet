@@ -1,6 +1,6 @@
 FROM nvidia/cuda:7.5-cudnn5-devel
 
-MAINTAINER gmd
+MAINTAINER gideonitemd
 
 # apt-get
 RUN apt-get update && apt-get install -y \
