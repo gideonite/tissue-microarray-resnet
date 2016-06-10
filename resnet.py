@@ -115,8 +115,7 @@ def res_net(x, y, activation=tf.nn.relu):
                                 bias=False)
 
       # shortcut connections that turn the network into its counterpart
-      # residual function (identity shortcut)
-      net = conv + net
+      net = conv + net[:,:,:,:conv.get_shape()[-1].value]
 
       try:
         # upscale to the next block size
