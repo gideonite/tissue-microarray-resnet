@@ -120,7 +120,6 @@ def res_net(x, y, activation=tf.nn.relu):
 
     # shortcut connections that turn the network into its counterpart
     # net = conv + net[:,:,:,:conv.get_shape()[-1].value]
-    import pdb; pdb.set_trace()
     net = conv + net
 
     try:
