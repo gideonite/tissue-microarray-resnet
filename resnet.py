@@ -60,8 +60,8 @@ def res_net(x, y, activation=tf.nn.relu):
   #           BottleneckBlock(3, 512, 128),
   #           BottleneckBlock(3, 1024, 256)]
 
-  blocks = [BottleneckBlock(3, 128, 32)
-            #BottleneckBlock(3, 256, 64)
+  blocks = [BottleneckBlock(3, 128, 32),
+            BottleneckBlock(3, 256, 64)
   ]
 
   input_shape = x.get_shape().as_list()
@@ -88,50 +88,52 @@ def res_net(x, y, activation=tf.nn.relu):
 
   # Create each bottleneck building block for each layer
   for block_i, block in enumerate(blocks):
-    for layer_i in range(block.num_layers):
+    # for layer_i in range(block.num_layers):
 
-      name = 'block_%d/layer_%d' % (block_i, layer_i)
+    name = 'block_%d' % (block_i)
 
-      # 1x1 convolution responsible for reducing dimension
-      with tf.variable_scope(name + '/conv_in'):
-        conv = learn.ops.conv2d(net, block.bottleneck_size,
-                                [1, 1], [1, 1, 1, 1],
-                                padding='VALID',
-                                activation=activation,
-                                batch_norm=True,
-                                bias=False)
+    # 1x1 convolution responsible for reducing dimension
+    with tf.variable_scope(name + '/conv_in'):
+      conv = learn.ops.conv2d(net, block.bottleneck_size,
+                              [1, 1], [1, 1, 1, 1],
+                              padding='VALID',
+                              activation=activation,
+                              batch_norm=True,
+                              bias=False)
 
-      with tf.variable_scope(name + '/conv_bottleneck'):
-        conv = learn.ops.conv2d(conv, block.bottleneck_size,
-                                [3, 3], [1, 1, 1, 1],
-                                padding='SAME',
-                                activation=activation,
-                                batch_norm=True,
-                                bias=False)
+    with tf.variable_scope(name + '/conv_bottleneck'):
+      conv = learn.ops.conv2d(conv, block.bottleneck_size,
+                              [3, 3], [1, 1, 1, 1],
+                              padding='SAME',
+                              activation=activation,
+                              batch_norm=True,
+                              bias=False)
 
-      # 1x1 convolution responsible for restoring dimension
-      with tf.variable_scope(name + '/conv_out'):
-        conv = learn.ops.conv2d(conv, block.num_filters,
-                                [1, 1], [1, 1, 1, 1],
-                                padding='VALID',
-                                activation=activation,
-                                batch_norm=True,
-                                bias=False)
+    # 1x1 convolution responsible for restoring dimension
+    with tf.variable_scope(name + '/conv_out'):
+      conv = learn.ops.conv2d(conv, block.num_filters,
+                              [1, 1], [1, 1, 1, 1],
+                              padding='VALID',
+                              activation=activation,
+                              batch_norm=True,
+                              bias=False)
 
-      # shortcut connections that turn the network into its counterpart
-      # net = conv + net[:,:,:,:conv.get_shape()[-1].value]
-      net = conv + net
+    # shortcut connections that turn the network into its counterpart
+    # net = conv + net[:,:,:,:conv.get_shape()[-1].value]
+    import pdb; pdb.set_trace()
+    net = conv + net
 
-      try:
-        # upscale to the next block size
-        next_block = blocks[block_i + 1]
-        with tf.variable_scope('block_%d/conv_upscale' % block_i):
-          net = learn.ops.conv2d(net, next_block.num_filters,
-                                 [1, 1], [1, 1, 1, 1],
-                                 bias=False,
-                                 padding='SAME')
-      except IndexError:
-        pass
+    try:
+      # upscale to the next block size
+      next_block = blocks[block_i + 1]
+
+      with tf.variable_scope('block_%d/conv_upscale' % block_i):
+        net = learn.ops.conv2d(net, next_block.num_filters,
+                               [1, 1], [1, 1, 1, 1],
+                               bias=False,
+                               padding='SAME')
+    except IndexError:
+      pass
 
   net_shape = net.get_shape().as_list()
   net = tf.nn.avg_pool(net,
