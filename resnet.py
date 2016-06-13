@@ -55,10 +55,14 @@ def res_net(x, y, activation=tf.nn.relu):
   # Configurations for each bottleneck block.
   BottleneckBlock = namedtuple(
       'BottleneckBlock', ['num_layers', 'num_filters', 'bottleneck_size'])
-  blocks = [BottleneckBlock(3, 128, 32),
-            BottleneckBlock(3, 256, 64),
-            BottleneckBlock(3, 512, 128),
-            BottleneckBlock(3, 1024, 256)]
+  # blocks = [BottleneckBlock(3, 128, 32),
+  #           BottleneckBlock(3, 256, 64),
+  #           BottleneckBlock(3, 512, 128),
+  #           BottleneckBlock(3, 1024, 256)]
+
+  blocks = [BottleneckBlock(3, 128, 32)
+            #BottleneckBlock(3, 256, 64)
+  ]
 
   input_shape = x.get_shape().as_list()
 
@@ -115,7 +119,8 @@ def res_net(x, y, activation=tf.nn.relu):
                                 bias=False)
 
       # shortcut connections that turn the network into its counterpart
-      net = conv + net[:,:,:,:conv.get_shape()[-1].value]
+      # net = conv + net[:,:,:,:conv.get_shape()[-1].value]
+      net = conv + net
 
       try:
         # upscale to the next block size
@@ -152,14 +157,14 @@ else:
       learning_rate=0.001, continue_training=True)
 
 while True:
-  # Train model and save summaries into logdir.
+# train model and save summaries into logdir.
   classifier.fit(
-      mnist.train.images, mnist.train.labels, logdir='models/resnet/')
-
-  # Calculate accuracy.
+    mnist.train.images, mnist.train.labels, logdir='models/resnet/')
+  
+  # calculate accuracy.
   score = metrics.accuracy_score(
-      mnist.test.labels, classifier.predict(mnist.test.images, batch_size=64))
-  print('Accuracy: {0:f}'.format(score))
-
-  # Save model graph and checkpoints.
+    mnist.test.labels, classifier.predict(mnist.test.images, batch_size=64))
+  print('accuracy: {0:f}'.format(score))
+  
+  # save model graph and checkpoints.
   classifier.save('models/resnet/')
