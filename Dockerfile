@@ -1,4 +1,8 @@
-FROM nvidia/cuda:7.5-cudnn4-devel
+# N.B. make sure this matches what is on your system. There is some
+# confusion about cudnn versioning. See
+# https://www.tensorflow.org/versions/r0.9/get_started/os_setup.html. "cuDNN
+# 6.5(v2), 7.0(v3), v5)"
+FROM nvidia/cuda:7.5-cudnn3-devel
 
 MAINTAINER gideonitemd
 
