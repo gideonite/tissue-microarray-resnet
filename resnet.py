@@ -150,11 +150,11 @@ if os.path.exists('models/resnet/graph.pbtxt'):
 else:
   # Create a new resnet classifier.
   classifier = learn.TensorFlowEstimator(
-      model_fn=res_net, n_classes=10, batch_size=2, steps=100,
+      model_fn=res_net, n_classes=10, batch_size=100, steps=100,
       learning_rate=0.001, continue_training=True)
 
 classifier = learn.TensorFlowEstimator(
-  model_fn=res_net, n_classes=10, batch_size=2, steps=100,
+  model_fn=res_net, n_classes=10, batch_size=100, steps=100,
   learning_rate=0.001, continue_training=True)
 
 while True:
@@ -164,7 +164,7 @@ while True:
 
   # Calculate accuracy.
   score = metrics.accuracy_score(
-      mnist.test.labels, classifier.predict(mnist.test.images, batch_size=2))
+      mnist.test.labels, classifier.predict(mnist.test.images, batch_size=64))
   print('Accuracy: {0:f}'.format(score))
 
   # Save model graph and checkpoints.
