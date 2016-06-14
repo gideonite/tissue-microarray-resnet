@@ -55,14 +55,11 @@ def res_net(x, y, activation=tf.nn.relu):
   # Configurations for each bottleneck block.
   BottleneckBlock = namedtuple(
       'BottleneckBlock', ['num_layers', 'num_filters', 'bottleneck_size'])
-  # blocks = [BottleneckBlock(3, 128, 32),
-  #           BottleneckBlock(3, 256, 64),
-  #           BottleneckBlock(3, 512, 128),
-  #           BottleneckBlock(3, 1024, 256)]
-
   blocks = [BottleneckBlock(3, 128, 32),
-            BottleneckBlock(3, 256, 64)
-  ]
+            BottleneckBlock(3, 256, 64),
+            BottleneckBlock(3, 512, 128),
+            BottleneckBlock(3, 1024, 256)]
+
 
   input_shape = x.get_shape().as_list()
 
