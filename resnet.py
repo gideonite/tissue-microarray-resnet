@@ -55,7 +55,7 @@ def res_net(x, y, activation=tf.nn.relu):
   # Configurations for each bottleneck group.
   BottleneckGroup = namedtuple(
       'BottleneckGroup', ['num_blocks', 'num_filters', 'bottleneck_size'])
-  blocks = [BottleneckGroup(3, 128, 32),
+  groups = [BottleneckGroup(3, 128, 32),
             BottleneckGroup(3, 256, 64),
             BottleneckGroup(3, 512, 128),
             BottleneckGroup(3, 1024, 256)]
@@ -78,17 +78,15 @@ def res_net(x, y, activation=tf.nn.relu):
 
   # First chain of resnets
   with tf.variable_scope('conv_layer2'):
-    net = learn.ops.conv2d(net, blocks[0].num_filters,
+    net = learn.ops.conv2d(net, groups[0].num_filters,
                            [1, 1], [1, 1, 1, 1],
                            padding='VALID', bias=True)
 
   # Create the bottleneck groups, each of which contains `num_blocks`
-  # bottleneck blocks.
-  for group_i, group in enumerate(blocks):
+  # bottleneck groups.
+  for group_i, group in enumerate(groups):
     for block_i in range(group.num_blocks):
-
       name = 'group_%d/block_%d' % (group_i, block_i)
-      print("NAME", name)
 
       # 1x1 convolution responsible for reducing dimension
       with tf.variable_scope(name + '/conv_in'):
@@ -109,8 +107,8 @@ def res_net(x, y, activation=tf.nn.relu):
 
       # 1x1 convolution responsible for restoring dimension
       with tf.variable_scope(name + '/conv_out'):
-        # conv = learn.ops.conv2d(conv, group.num_filters,
-        conv = learn.ops.conv2d(conv, net.get_shape()[-1].value,
+        input_dim = net.get_shape()[-1].value
+        conv = learn.ops.conv2d(conv, input_dim,
                                 [1, 1], [1, 1, 1, 1],
                                 padding='VALID',
                                 activation=activation,
@@ -123,9 +121,9 @@ def res_net(x, y, activation=tf.nn.relu):
 
     try:
       # upscale to the next group size
-      next_block = blocks[group_i + 1]
+      next_group = groups[group_i + 1]
       with tf.variable_scope('block_%d/conv_upscale' % group_i):
-        net = learn.ops.conv2d(net, next_block.num_filters,
+        net = learn.ops.conv2d(net, next_group.num_filters,
                                [1, 1], [1, 1, 1, 1],
                                bias=False,
                                padding='SAME')
@@ -146,17 +144,17 @@ def res_net(x, y, activation=tf.nn.relu):
 # Download and load MNIST data.
 mnist = input_data.read_data_sets('MNIST_data')
 
-# # Restore model if graph is saved into a folder.
-# if os.path.exists('models/resnet/graph.pbtxt'):
-#   classifier = learn.TensorFlowEstimator.restore('models/resnet/')
-# else:
-#   # Create a new resnet classifier.
-#   classifier = learn.TensorFlowEstimator(
-#       model_fn=res_net, n_classes=10, batch_size=100, steps=100,
-#       learning_rate=0.001, continue_training=True)
+# Restore model if graph is saved into a folder.
+if os.path.exists('models/resnet/graph.pbtxt'):
+  classifier = learn.TensorFlowEstimator.restore('models/resnet/')
+else:
+  # Create a new resnet classifier.
+  classifier = learn.TensorFlowEstimator(
+      model_fn=res_net, n_classes=10, batch_size=2, steps=100,
+      learning_rate=0.001, continue_training=True)
 
 classifier = learn.TensorFlowEstimator(
-  model_fn=res_net, n_classes=10, batch_size=100, steps=100,
+  model_fn=res_net, n_classes=10, batch_size=2, steps=100,
   learning_rate=0.001, continue_training=True)
 
 while True:
@@ -166,7 +164,7 @@ while True:
 
   # Calculate accuracy.
   score = metrics.accuracy_score(
-      mnist.test.labels, classifier.predict(mnist.test.images, batch_size=64))
+      mnist.test.labels, classifier.predict(mnist.test.images, batch_size=2))
   print('Accuracy: {0:f}'.format(score))
 
   # Save model graph and checkpoints.
