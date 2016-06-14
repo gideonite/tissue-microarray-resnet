@@ -60,9 +60,9 @@ def res_net(x, y, activation=tf.nn.relu):
             BottleneckGroup(3, 512, 128),
             BottleneckGroup(3, 1024, 256)]
 
+  # The first dimension of the input is the batch. If `input_shape ==
+  # 2` then the image is 1D. Reshape it to be 2D.
   input_shape = x.get_shape().as_list()
-
-  # Reshape the input into the right shape if it's 2D tensor
   if len(input_shape) == 2:
     ndim = int(sqrt(input_shape[1]))
     x = tf.reshape(x, [-1, ndim, ndim, 1])
