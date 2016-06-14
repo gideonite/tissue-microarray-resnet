@@ -143,14 +143,18 @@ def res_net(x, y, activation=tf.nn.relu):
 # Download and load MNIST data.
 mnist = input_data.read_data_sets('MNIST_data')
 
-# Restore model if graph is saved into a folder.
-if os.path.exists('models/resnet/graph.pbtxt'):
-  classifier = learn.TensorFlowEstimator.restore('models/resnet/')
-else:
-  # Create a new resnet classifier.
-  classifier = learn.TensorFlowEstimator(
-      model_fn=res_net, n_classes=10, batch_size=100, steps=100,
-      learning_rate=0.001, continue_training=True)
+# # Restore model if graph is saved into a folder.
+# if os.path.exists('models/resnet/graph.pbtxt'):
+#   classifier = learn.TensorFlowEstimator.restore('models/resnet/')
+# else:
+#   # Create a new resnet classifier.
+#   classifier = learn.TensorFlowEstimator(
+#       model_fn=res_net, n_classes=10, batch_size=100, steps=100,
+#       learning_rate=0.001, continue_training=True)
+
+classifier = learn.TensorFlowEstimator(
+  model_fn=res_net, n_classes=10, batch_size=100, steps=100,
+  learning_rate=0.001, continue_training=True)
 
 while True:
   # Train model and save summaries into logdir.
