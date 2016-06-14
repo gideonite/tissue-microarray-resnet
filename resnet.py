@@ -60,7 +60,6 @@ def res_net(x, y, activation=tf.nn.relu):
             BottleneckBlock(3, 512, 128),
             BottleneckBlock(3, 1024, 256)]
 
-
   input_shape = x.get_shape().as_list()
 
   # Reshape the input into the right shape if it's 2D tensor
@@ -85,51 +84,50 @@ def res_net(x, y, activation=tf.nn.relu):
 
   # Create each bottleneck building block for each layer
   for block_i, block in enumerate(blocks):
-    # for layer_i in range(block.num_layers):
+    for layer_i in range(block.num_layers):
 
-    name = 'block_%d' % (block_i)
+      name = 'block_%d/layer_%d' % (block_i, layer_i)
 
-    # 1x1 convolution responsible for reducing dimension
-    with tf.variable_scope(name + '/conv_in'):
-      conv = learn.ops.conv2d(net, block.bottleneck_size,
-                              [1, 1], [1, 1, 1, 1],
-                              padding='VALID',
-                              activation=activation,
-                              batch_norm=True,
-                              bias=False)
+      # 1x1 convolution responsible for reducing dimension
+      with tf.variable_scope(name + '/conv_in'):
+        conv = learn.ops.conv2d(net, block.bottleneck_size,
+                                [1, 1], [1, 1, 1, 1],
+                                padding='VALID',
+                                activation=activation,
+                                batch_norm=True,
+                                bias=False)
 
-    with tf.variable_scope(name + '/conv_bottleneck'):
-      conv = learn.ops.conv2d(conv, block.bottleneck_size,
-                              [3, 3], [1, 1, 1, 1],
-                              padding='SAME',
-                              activation=activation,
-                              batch_norm=True,
-                              bias=False)
+      with tf.variable_scope(name + '/conv_bottleneck'):
+        conv = learn.ops.conv2d(conv, block.bottleneck_size,
+                                [3, 3], [1, 1, 1, 1],
+                                padding='SAME',
+                                activation=activation,
+                                batch_norm=True,
+                                bias=False)
 
-    # 1x1 convolution responsible for restoring dimension
-    with tf.variable_scope(name + '/conv_out'):
-      conv = learn.ops.conv2d(conv, block.num_filters,
-                              [1, 1], [1, 1, 1, 1],
-                              padding='VALID',
-                              activation=activation,
-                              batch_norm=True,
-                              bias=False)
+      # 1x1 convolution responsible for restoring dimension
+      with tf.variable_scope(name + '/conv_out'):
+        conv = learn.ops.conv2d(conv, block.num_filters,
+                                [1, 1], [1, 1, 1, 1],
+                                padding='VALID',
+                                activation=activation,
+                                batch_norm=True,
+                                bias=False)
 
-    # shortcut connections that turn the network into its counterpart
-    # net = conv + net[:,:,:,:conv.get_shape()[-1].value]
-    net = conv + net
+      # shortcut connections that turn the network into its counterpart
+      # residual function (identity shortcut)
+      net = conv + net
 
-    try:
-      # upscale to the next block size
-      next_block = blocks[block_i + 1]
-
-      with tf.variable_scope('block_%d/conv_upscale' % block_i):
-        net = learn.ops.conv2d(net, next_block.num_filters,
-                               [1, 1], [1, 1, 1, 1],
-                               bias=False,
-                               padding='SAME')
-    except IndexError:
-      pass
+      try:
+        # upscale to the next block size
+        next_block = blocks[block_i + 1]
+        with tf.variable_scope('block_%d/conv_upscale' % block_i):
+          net = learn.ops.conv2d(net, next_block.num_filters,
+                                 [1, 1], [1, 1, 1, 1],
+                                 bias=False,
+                                 padding='SAME')
+      except IndexError:
+        pass
 
   net_shape = net.get_shape().as_list()
   net = tf.nn.avg_pool(net,
@@ -155,14 +153,14 @@ else:
       learning_rate=0.001, continue_training=True)
 
 while True:
-# train model and save summaries into logdir.
+  # Train model and save summaries into logdir.
   classifier.fit(
-    mnist.train.images, mnist.train.labels, logdir='models/resnet/')
-  
-  # calculate accuracy.
+      mnist.train.images, mnist.train.labels, logdir='models/resnet/')
+
+  # Calculate accuracy.
   score = metrics.accuracy_score(
-    mnist.test.labels, classifier.predict(mnist.test.images, batch_size=64))
-  print('accuracy: {0:f}'.format(score))
-  
-  # save model graph and checkpoints.
+      mnist.test.labels, classifier.predict(mnist.test.images, batch_size=64))
+  print('Accuracy: {0:f}'.format(score))
+
+  # Save model graph and checkpoints.
   classifier.save('models/resnet/')
