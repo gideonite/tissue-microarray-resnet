@@ -2,7 +2,9 @@
 Handles the ETL for Ciders-Sinai dataset.
 """
 
+from collections import namedtuple
 import cv2
+import itertools
 import numpy as np
 import random
 import scipy.io as sio
@@ -46,4 +48,5 @@ for file_num in file_nums:
     xdata.append(patch_iter(os.path.expandvars(img_filename %(file_num)), patch_size, stride))
     ydata.append(patch_center_iter(os.path.expandvars(label_filename %(file_num)), patch_size, stride))
 
-cedars_sinai_data = (xdata, ydata)
+DataSet = namedtuple("DataSet", ["xdata", "ydata"])
+cedars_sinai_data = DataSet(itertools.chain(*xdata), itertools.chain(*ydata))

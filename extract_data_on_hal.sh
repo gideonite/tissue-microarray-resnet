@@ -1,6 +1,6 @@
 #!/bin/bash
-cp /cbio/ski/fuchs/home/dresdnerg/data/CedersSinai_PCa.zip /scratch/7469793.hal-sched1.local
+cp /cbio/ski/fuchs/home/dresdnerg/data/CedersSinai_PCa.zip $TMPDIR
 pushd .
-cd /scratch/7469793.hal-sched1.local
+cd $TMPDIR
 unzip CedersSinai_PCa.zip
 popd
