@@ -58,14 +58,15 @@ def res_net(x, y, activation=tf.nn.relu):
   groups = [BottleneckGroup(3, 128, 32),
             BottleneckGroup(3, 256, 64),
             BottleneckGroup(3, 512, 128),
-            BottleneckGroup(3, 1024, 256)]
+            BottleneckGroup(3, 1024, 256)
+  ]
 
   # The first dimension of the input is the batch. If `input_shape ==
   # 2` then the image is 1D. Reshape it to be 2D.
   input_shape = x.get_shape().as_list()
   if len(input_shape) == 2:
-    ndim = int(sqrt(input_shape[1]))
-    x = tf.reshape(x, [-1, ndim, ndim, 1])
+    ndim = int(sqrt(input_shape[1]/3))
+    x = tf.reshape(x, [-1, ndim, ndim, 3])
 
   # First convolution expands to 64 channels
   with tf.variable_scope('conv_layer1'):
@@ -140,32 +141,28 @@ def res_net(x, y, activation=tf.nn.relu):
 
   return learn.models.logistic_regression(net, y)
 
+if __name__ == "__main__":
+    # Download and load MNIST data.
+    mnist = input_data.read_data_sets('MNIST_data')
+    
+    # Restore model if graph is saved into a folder.
+    if os.path.exists('models/resnet/graph.pbtxt'):
+      classifier = learn.TensorFlowEstimator.restore('models/resnet/')
+    else:
+      # Create a new resnet classifier.
+      classifier = learn.TensorFlowEstimator(
+        model_fn=res_net, n_classes=10, batch_size=100, steps=100,
+        learning_rate=0.001, continue_training=True)
 
-# Download and load MNIST data.
-mnist = input_data.read_data_sets('MNIST_data')
+      while True:
+        # Train model and save summaries into logdir.
+        classifier.fit(
+          mnist.train.images, mnist.train.labels, logdir='models/resnet/')
 
-# Restore model if graph is saved into a folder.
-if os.path.exists('models/resnet/graph.pbtxt'):
-  classifier = learn.TensorFlowEstimator.restore('models/resnet/')
-else:
-  # Create a new resnet classifier.
-  classifier = learn.TensorFlowEstimator(
-      model_fn=res_net, n_classes=10, batch_size=100, steps=100,
-      learning_rate=0.001, continue_training=True)
+        # Calculate accuracy.
+        score = metrics.accuracy_score(
+          mnist.test.labels, classifier.predict(mnist.test.images, batch_size=64))
+        print('Accuracy: {0:f}'.format(score))
 
-classifier = learn.TensorFlowEstimator(
-  model_fn=res_net, n_classes=10, batch_size=100, steps=100,
-  learning_rate=0.001, continue_training=True)
-
-while True:
-  # Train model and save summaries into logdir.
-  classifier.fit(
-      mnist.train.images, mnist.train.labels, logdir='models/resnet/')
-
-  # Calculate accuracy.
-  score = metrics.accuracy_score(
-      mnist.test.labels, classifier.predict(mnist.test.images, batch_size=64))
-  print('Accuracy: {0:f}'.format(score))
-
-  # Save model graph and checkpoints.
-  classifier.save('models/resnet/')
+    # Save model graph and checkpoints.
+    classifier.save('models/resnet/')
