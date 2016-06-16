@@ -34,7 +34,7 @@ def main(_):
         score = metrics.accuracy_score(
             ytest, classifier.predict(xtest, batch_size=100))
         tr_error = metrics.accuracy_score(
-            ytrain, classifier.predict(xtrain), batch_size=100)
+            ytrain, classifier.predict(xtrain, batch_size=100))
         print('Accuracy: {0:f}'.format(score))
         print('Training Error: {0:f}'.format(tr_error))
         with open(FLAGS.model_cache_dir + 'training.log', 'a') as accuracy_file:
