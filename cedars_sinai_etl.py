@@ -47,6 +47,7 @@ def _patch_labels(matfilename, patch_size, stride):
 file_nums = list(range(1,225))
 random.shuffle(file_nums)
 def dataset(num_images=len(file_nums), train_test_split=0.8):
+    print('reading ' + str(num_images) + ' images')
     xtrain = []
     ytrain = []
     xtest = []

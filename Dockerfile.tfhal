@@ -35,6 +35,7 @@ RUN pip --no-cache-dir install \
 # install Tensorflow
 # TODO this version should be bumped up to 0.9.0 (June 15, 2016)
 ENV TENSORFLOW_VERSION 0.8.0
+#0.9.0rc0
 RUN pip install --upgrade https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-${TENSORFLOW_VERSION}-cp27-none-linux_x86_64.whl
 
 # TODO: I am not familiar with TensorBoard, disabled for the time being but kept around in case someone else wants to use it. If that's you, please update this wiki.
