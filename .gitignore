@@ -1,3 +1,4 @@
 MNIST_data
 models
 *.pyc
+notebooks
