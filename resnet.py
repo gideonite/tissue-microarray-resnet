@@ -33,7 +33,6 @@ import tensorflow as tf
 from tensorflow.contrib import learn
 from tensorflow.examples.tutorials.mnist import input_data
 
-
 def res_net(x, y, activation=tf.nn.relu):
   """Builds a residual network.
 

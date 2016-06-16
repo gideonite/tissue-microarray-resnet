@@ -26,23 +26,23 @@ def main(_):
     xtrain, xtest, ytrain, ytest = train_test_split(
         xdata, ydata, test_size=0.2, random_state=42)
         
-    for epoch in xrange(FLAGS.num_epochs):
-        classifier.fit(
-            xtrain, ytrain, logdir=FLAGS.model_cache_dir)
+    # for epoch in xrange(FLAGS.num_epochs):
+    #     classifier.fit(
+    #         xtrain, ytrain, logdir=FLAGS.model_cache_dir)
 
-        # Calculate accuracy and training error
-        score = metrics.accuracy_score(
-            ytest, classifier.predict(xtest, batch_size=100))
-        tr_error = metrics.accuracy_score(
-            ytrain, classifier.predict(xtrain, batch_size=100))
-        print('Accuracy: {0:f}'.format(score))
-        print('Training Error: {0:f}'.format(tr_error))
-        with open(FLAGS.model_cache_dir + 'training.log', 'a') as accuracy_file:
-            accuracy_file.write('Accuracy: {0:f}'.format(score))
-            accuracy_file.write('\n')
+    #     # Calculate accuracy and training error
+    #     score = metrics.accuracy_score(
+    #         ytest, classifier.predict(xtest, batch_size=100))
+    #     tr_error = metrics.accuracy_score(
+    #         ytrain, classifier.predict(xtrain, batch_size=100))
+    #     print('Accuracy: {0:f}'.format(score))
+    #     print('Training Error: {0:f}'.format(tr_error))
+    #     with open(FLAGS.model_cache_dir + 'training.log', 'a') as accuracy_file:
+    #         accuracy_file.write('Accuracy: {0:f}'.format(score))
+    #         accuracy_file.write('\n')
 
-            accuracy_file.write('Training Error: {0:f}'.format(tr_error))
-            accuracy_file.write('\n')
+    #         accuracy_file.write('Training Error: {0:f}'.format(tr_error))
+    #         accuracy_file.write('\n')
 
         # classifier.save(FLAGS.model_cache_dir)
 

@@ -8,15 +8,20 @@ import numpy as np
 import random
 import scipy.io as sio
 import os
+import tensorflow as tf
 
 random.seed(1337) # TODO
 
-patch_size = 29
-stride = 10
 img_filename = "/mnt/data/TIFF color normalized sequential filenames/test%d.tif"
 label_filename = "/mnt/data/ATmask sequential filenames/test%d_Mask.mat"
 
-def _patches(imgfilename, patch_size, stride):
+flags = tf.app.flags
+FLAGS = flags.FLAGS
+
+flags.DEFINE_integer('patch_size', 64, 'Size of square patches to extract from images')
+flags.DEFINE_integer('stride', 32, 'Stride between patches')
+
+def _patches(imgfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
     '''
     Takes an image represented by a numpy array of dimensions [l, w,
     channel], and creates an iterator over all patches in the imagine
@@ -31,7 +36,7 @@ def _patches(imgfilename, patch_size, stride):
 
     return ret
 
-def _patch_labels(matfilename, patch_size, stride):
+def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
     '''
     Takes a patch of pixel-wise labels and extracts the representative
     label, namely the center of the patch.
@@ -48,14 +53,15 @@ file_nums = list(range(1,225))
 random.shuffle(file_nums)
 def dataset(num_images=len(file_nums), train_test_split=0.8):
     print('reading ' + str(num_images) + ' images')
+    print('patch_size=' + str(FLAGS.patch_size) + ' stride=' + str(FLAGS.stride))
     xtrain = []
     ytrain = []
     xtest = []
     ytest = []
 
     for file_num in file_nums[:int(train_test_split * num_images)]:
-        patches = _patches(img_filename %(file_num), patch_size, stride)
-        labels = _patch_labels(label_filename %(file_num), patch_size, stride)
+        patches = _patches(img_filename %(file_num))
+        labels = _patch_labels(label_filename %(file_num))
 
         assert len(patches) == len(labels)
 
@@ -64,8 +70,8 @@ def dataset(num_images=len(file_nums), train_test_split=0.8):
             ytrain.append(labels[i])
 
     for file_num in file_nums[int(train_test_split * num_images):num_images]:
-        patches = _patches(img_filename %(file_num), patch_size, stride)
-        labels = _patch_labels(label_filename %(file_num), patch_size, stride)
+        patches = _patches(img_filename %(file_num))
+        labels = _patch_labels(label_filename %(file_num))
 
         assert len(patches) == len(labels)
 
