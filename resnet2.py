@@ -73,42 +73,87 @@ def inference(xplaceholder, num_classes):
     net = fully_connected(net, num_classes)
     return net
 
-with tf.Session() as sess:
-    batch_size = 128
-    ndim = int(sqrt(mnist.train.images.shape[1]))
-    xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, 1))
+def train(x, y,
+          num_classes,
+          batch_size,
+          num_epochs,
+          sess,
+          optimizer=tf.train.GradientDescentOptimizer,
+          learning_rate=0.01):
+
+    example = x[0]
+    assert example.shape[0] == example.shape[1]
+    ndim = example.shape[0]
+    num_channels = example.shape[2]
+    xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
 
-    preds = inference(xplaceholder, 10)
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
+    preds = inference(xplaceholder, num_classes)
+
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder,
+                                                                   name='crossentropy')
     avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
-
-    accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1), yplaceholder), tf.float32))
-
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
     global_step = tf.Variable(0, name='global_step', trainable=False)
-    train_op = optimizer.minimize(avg_loss, global_step=global_step)
+    train_op = optimizer(learning_rate).minimize(avg_loss, global_step=global_step)
+    accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1),
+                                               yplaceholder), tf.float32))
 
     init = tf.initialize_all_variables()
     sess.run(init)
+    num_examples = x.shape[0]
+    for epoch_i in xrange(num_epochs):
+        for batch_i in xrange(0, num_examples, batch_size):
+            xbatch = x[batch_i : batch_i + batch_size]
+            ybatch = y[batch_i : batch_i + batch_size]
 
+            _,_,a = sess.run([train_op, avg_loss, accuracy],
+                     feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+
+            print('epoch: ' + str(epoch_i) + ' batch: ' + str(batch_i/batch_size) + ' accuracy: ' + str(a))
+
+    return False
+
+with tf.Session() as sess:
     xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
     ytrain = mnist.train.labels
-    num_examples = xtrain.shape[0]
+    train(xtrain, ytrain, num_classes=4, batch_size=128, num_epochs=10, sess=sess)
 
-    for epoch in xrange(50):
-        losses = []
-        accs = []
-        for batch_i in xrange(0, num_examples, batch_size):
-            xbatch = xtrain[batch_i : batch_i + batch_size]
-            ybatch = ytrain[batch_i : batch_i + batch_size]
+# with tf.Session() as sess:
+    # batch_size = 128
+    # ndim = int(sqrt(mnist.train.images.shape[1]))
+    # xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, 1))
+    # yplaceholder = tf.placeholder(tf.int64, shape=(None))
 
-            _, batchloss, a = sess.run([train_op, avg_loss, accuracy], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-            losses.append(batchloss)
-            accs.append(a)
+    # preds = inference(xplaceholder, 10)
+    # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
+    # avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
 
-    #         # print("training accuracy: " + str(a))
+    # accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1), yplaceholder), tf.float32))
 
-        print("epoch: " + str(epoch) + " " + " avg loss: " + str(sum(losses) / len(losses)) + " avg tr accuracy: " + str(sum(accs) / len(accs)))
+    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
+    # global_step = tf.Variable(0, name='global_step', trainable=False)
+    # train_op = optimizer.minimize(avg_loss, global_step=global_step)
+
+    # init = tf.initialize_all_variables()
+    # sess.run(init)
+
+    # xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
+    # ytrain = mnist.train.labels
+    # num_examples = xtrain.shape[0]
+
+    # for epoch in xrange(50):
+    #     losses = []
+    #     accs = []
+    #     for batch_i in xrange(0, num_examples, batch_size):
+    #         xbatch = xtrain[batch_i : batch_i + batch_size]
+    #         ybatch = ytrain[batch_i : batch_i + batch_size]
+
+    #         _, batchloss, a = sess.run([train_op, avg_loss, accuracy], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+    #         losses.append(batchloss)
+    #         accs.append(a)
+
+    # #         # print("training accuracy: " + str(a))
+
+    #     print("epoch: " + str(epoch) + " " + " avg loss: " + str(sum(losses) / len(losses)) + " avg tr accuracy: " + str(sum(accs) / len(accs)))
 
         # print("training loss: ", a)
