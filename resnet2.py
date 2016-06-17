@@ -80,32 +80,30 @@ with tf.Session() as sess:
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
 
     preds = inference(xplaceholder, 10)
-    print(preds)
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
+    avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
 
-    # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
-    # avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
+    accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1), yplaceholder), tf.float32))
 
-    # accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1), yplaceholder), tf.float32))
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    train_op = optimizer.minimize(avg_loss, global_step=global_step)
 
-    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
-    # global_step = tf.Variable(0, name='global_step', trainable=False)
-    # train_op = optimizer.minimize(avg_loss, global_step=global_step)
+    init = tf.initialize_all_variables()
+    sess.run(init)
 
-    # init = tf.initialize_all_variables()
-    # sess.run(init)
+    xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
+    ytrain = mnist.train.labels
+    num_examples = xtrain.shape[0]
 
-    # xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
-    # ytrain = mnist.train.labels
-    # num_examples = xtrain.shape[0]
+    for epoch in xrange(50):
+        losses = []
+        accs = []
+        for batch_i in xrange(0, num_examples, batch_size):
+            xbatch = xtrain[batch_i : batch_i + batch_size]
+            ybatch = ytrain[batch_i : batch_i + batch_size]
 
-    # for epoch in xrange(50):
-    #     losses = []
-    #     accs = []
-    #     for batch_i in xrange(0, num_examples, batch_size):
-    #         xbatch = xtrain[batch_i : batch_i + batch_size]
-    #         ybatch = ytrain[batch_i : batch_i + batch_size]
-
-    #         _, batchloss, a = sess.run([train_op, avg_loss, accuracy], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+            _, batchloss, a = sess.run([train_op, avg_loss, accuracy], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
     #         losses.append(batchloss)
     #         accs.append(a)
 
