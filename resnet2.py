@@ -52,8 +52,8 @@ def inference(xplaceholder):
 with tf.Session() as sess:
     batch_size = 128
     ndim = int(sqrt(mnist.train.images.shape[1]))
-    xplaceholder = tf.placeholder(tf.float32, shape=(batch_size, ndim, ndim, 1))
-    yplaceholder = tf.placeholder(tf.int32, shape=(batch_size))
+    xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, 1))
+    yplaceholder = tf.placeholder(tf.int32, shape=(None))
 
     preds = inference(xplaceholder)
 
