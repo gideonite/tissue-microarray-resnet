@@ -73,15 +73,19 @@ def inference(xplaceholder, num_classes):
     net = fully_connected(net, num_classes)
     return net
 
-def train(x, y,
+def train(xtrain,
+          ytrain,
+          xtest,
+          ytest,
           num_classes,
           batch_size,
           num_epochs,
           sess,
+          saver,
           optimizer=tf.train.GradientDescentOptimizer,
           learning_rate=0.01):
 
-    example = x[0]
+    example = xtrain[0]
     assert example.shape[0] == example.shape[1]
     ndim = example.shape[0]
     num_channels = example.shape[2]
@@ -100,19 +104,22 @@ def train(x, y,
 
     init = tf.initialize_all_variables()
     sess.run(init)
-    num_examples = x.shape[0]
+    num_examples = xtrain.shape[0]
     for epoch_i in xrange(num_epochs):
-        batch_accuracies = []
+        train_accs = []
         for batch_i in xrange(0, num_examples, batch_size):
-            xbatch = x[batch_i : batch_i + batch_size]
-            ybatch = y[batch_i : batch_i + batch_size]
+            xbatch = xtrain[batch_i : batch_i + batch_size]
+            ybatch = ytrain[batch_i : batch_i + batch_size]
 
-            _,_,acc = sess.run([train_op, avg_loss, accuracy],
+            _,_,train_acc = sess.run([train_op, avg_loss, accuracy],
                                feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
 
-            batch_accuracies.append(acc)
+            train_accs.append(train_acc)
 
-        yield batch_accuracies
+        saver.save(sess, savedir)
+        test_acc = sess.run(acc, feed_dict={xplaceholder: xtest, yplaceholder: ytest})
+
+        yield train_accs, test_acc
 
 with tf.Session() as sess:
     xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
