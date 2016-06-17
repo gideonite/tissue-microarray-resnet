@@ -82,6 +82,7 @@ def train(xtrain,
           num_epochs,
           sess,
           saver,
+          savedir,
           optimizer=tf.train.GradientDescentOptimizer,
           learning_rate=0.01):
 
@@ -117,6 +118,7 @@ def train(xtrain,
             train_accs.append(train_acc)
 
         saver.save(sess, savedir)
+
         test_acc = sess.run(acc, feed_dict={xplaceholder: xtest, yplaceholder: ytest})
 
         yield train_accs, test_acc

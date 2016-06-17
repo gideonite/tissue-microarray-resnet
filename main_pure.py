@@ -36,7 +36,18 @@ def main(_):
 
     saver = tf.train.Saver(model_cache_dir + timestamp)
     with tf.Session() as sess:
-        for train_accs, test_acc in resnet_pure.train(xtrain, ytrain, xtest, ytest, 4, FLAGS.batch_size, FLAGS.num_epochs, sess, saver, model_cache, optimizer=tf.train.GradientDescentOptimizer, learning_rate=0.01):
+        for train_accs, test_acc in resnet_pure.train(xtrain,
+                                                      ytrain,
+                                                      xtest,
+                                                      ytest,
+                                                      4,
+                                                      FLAGS.batch_size,
+                                                      FLAGS.num_epochs,
+                                                      sess,
+                                                      saver,
+                                                      model_cache,
+                                                      optimizer=tf.train.GradientDescentOptimizer,
+                                                      learning_rate=0.01):
             log['train_acc'].append(train_accs)
             log['test_acc'].append(test_acc)
 
