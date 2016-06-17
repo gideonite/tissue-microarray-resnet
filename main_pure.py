@@ -13,8 +13,7 @@ FLAGS = flags.FLAGS
 
 timestamp = str(time.time())
 
-flags.DEFINE_string('training_log_dir', '/mnt/code/notebooks/results/' + timestamp + '.json')
-flags.DEFINE_string('model_cache', '/mnt/data/models/' + timestamp, 'Directory to save models and summaries')
+flags.DEFINE_string('training_log_dir', '/mnt/code/notebooks/results/' + timestamp + '.json', '') #TODO
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
 
@@ -34,7 +33,6 @@ def main(_):
            'patch_size': FLAGS.patch_size,
            'stride': FLAGS.stride}
 
-    saver = tf.train.Saver(model_cache_dir + timestamp)
     with tf.Session() as sess:
         for train_accs, test_acc in resnet_pure.train(xtrain,
                                                       ytrain,
@@ -44,12 +42,12 @@ def main(_):
                                                       FLAGS.batch_size,
                                                       FLAGS.num_epochs,
                                                       sess,
-                                                      saver,
-                                                      model_cache,
                                                       optimizer=tf.train.GradientDescentOptimizer,
                                                       learning_rate=0.01):
             log['train_acc'].append(train_accs)
             log['test_acc'].append(test_acc)
+
+            print(test_acc)
 
             # overwrite the log file each time.
             with open(FLAGS.training_log_dir, 'w+') as logfile:

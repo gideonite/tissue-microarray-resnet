@@ -81,8 +81,6 @@ def train(xtrain,
           batch_size,
           num_epochs,
           sess,
-          saver,
-          savedir,
           optimizer=tf.train.GradientDescentOptimizer,
           learning_rate=0.01):
 
@@ -117,13 +115,6 @@ def train(xtrain,
 
             train_accs.append(train_acc)
 
-        saver.save(sess, savedir)
-
         test_acc = sess.run(acc, feed_dict={xplaceholder: xtest, yplaceholder: ytest})
 
         yield train_accs, test_acc
-
-with tf.Session() as sess:
-    xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
-    ytrain = mnist.train.labels
-    train(xtrain, ytrain, num_classes=4, batch_size=128, num_epochs=10, sess=sess)
