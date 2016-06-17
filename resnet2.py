@@ -37,7 +37,7 @@ groups = [BottleneckGroup(3, 128, 32),
           BottleneckGroup(3, 1024, 256)
 ]
 
-def inference(xplaceholder):
+def inference(xplaceholder, num_classes):
   # First convolution expands to 64 channels
     with tf.variable_scope('first_conv_expand_layer'):
         net = conv2d(xplaceholder, [7, 7], 64, [1, 1, 1, 1])
@@ -66,6 +66,11 @@ def inference(xplaceholder):
         except IndexError:
             pass
 
+    net_shape = net.get_shape().as_list()
+    net = tf.nn.avg_pool(net, ksize=[1, net_shape[1], net_shape[2], 1],
+                   strides=[1, 1, 1, 1], padding='VALID')
+    net = flatten(net)
+    net = fully_connected(net, num_classes)
     return net
 
 with tf.Session() as sess:
@@ -74,7 +79,8 @@ with tf.Session() as sess:
     xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, 1))
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
 
-    preds = inference(xplaceholder)
+    preds = inference(xplaceholder, 10)
+    print(preds)
 
     # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
     # avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
