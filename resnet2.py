@@ -40,7 +40,7 @@ groups = [BottleneckGroup(3, 128, 32),
 def inference(xplaceholder):
   # First convolution expands to 64 channels
     with tf.variable_scope('first_conv_expand_layer'):
-        net = conv2d(xplaceholder, 64, [7, 7])
+        net = conv2d(xplaceholder, [7, 7], 64, [1, 1, 1, 1])
     net = tf.nn.max_pool(
         net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
@@ -49,30 +49,16 @@ def inference(xplaceholder):
             name = 'group_%d/block_%d' % (group_i, block_i)
 
             with tf.variable_scope(name + '/conv_in'):
-                with tf.variable_scope('layer1') as scope:
-                    net = conv2d(net, [3, 3], 64, [1,1,1,1])
+                conv = conv2d(net, [1, 1], group.bottleneck_size, [1, 1, 1, 1])
 
-                net = tf.nn.max_pool(
-                    net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+            with tf.variable_scope(name + '/conv_bottleneck'):
+                conv = conv2d(net, [3, 3], group.bottleneck_size, [1, 1, 1, 1])
 
-                with tf.variable_scope('layer2') as scope:
-                    net = conv2d(net, [3, 3], 64, [1,1,1,1])
+            with tf.variable_scope(name + '/conv_out'):
+                outdim = net.get_shape()[-1].value
+                conv = conv2d(net, [3, 3], outdim, [1, 1, 1, 1])
 
-                net = tf.nn.max_pool(
-                    net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-
-                with tf.variable_scope('layer3') as scope:
-                    net = conv2d(net, [3, 3], 64, [1,1,1,1])
-
-                net = tf.nn.max_pool(
-                    net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-
-                with tf.variable_scope('skip_connection') as scope:
-                    net = conv2d(xplaceholder, [7, 7], 64, [1,7,7,1]) + net
-
-        with tf.variable_scope('fully_connected1') as scope:
-            flattened = flatten(net)
-            net = fully_connected(flattened, 1000)
+            net = conv + net
 
     return net
 
@@ -84,35 +70,35 @@ with tf.Session() as sess:
 
     preds = inference(xplaceholder)
 
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
-    avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
+    # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
+    # avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
 
-    accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1), yplaceholder), tf.float32))
+    # accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1), yplaceholder), tf.float32))
 
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-    train_op = optimizer.minimize(avg_loss, global_step=global_step)
+    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
+    # global_step = tf.Variable(0, name='global_step', trainable=False)
+    # train_op = optimizer.minimize(avg_loss, global_step=global_step)
 
-    init = tf.initialize_all_variables()
-    sess.run(init)
+    # init = tf.initialize_all_variables()
+    # sess.run(init)
 
-    xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
-    ytrain = mnist.train.labels
-    num_examples = xtrain.shape[0]
+    # xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
+    # ytrain = mnist.train.labels
+    # num_examples = xtrain.shape[0]
 
-    for epoch in xrange(50):
-        losses = []
-        accs = []
-        for batch_i in xrange(0, num_examples, batch_size):
-            xbatch = xtrain[batch_i : batch_i + batch_size]
-            ybatch = ytrain[batch_i : batch_i + batch_size]
+    # for epoch in xrange(50):
+    #     losses = []
+    #     accs = []
+    #     for batch_i in xrange(0, num_examples, batch_size):
+    #         xbatch = xtrain[batch_i : batch_i + batch_size]
+    #         ybatch = ytrain[batch_i : batch_i + batch_size]
 
-            _, batchloss, a = sess.run([train_op, avg_loss, accuracy], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-            losses.append(batchloss)
-            accs.append(a)
+    #         _, batchloss, a = sess.run([train_op, avg_loss, accuracy], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+    #         losses.append(batchloss)
+    #         accs.append(a)
 
-            # print("training accuracy: " + str(a))
+    #         # print("training accuracy: " + str(a))
 
-        print("epoch: " + str(epoch) + " " + " avg loss: " + str(sum(losses) / len(losses)) + " avg tr accuracy: " + str(sum(accs) / len(accs)))
+    #     print("epoch: " + str(epoch) + " " + " avg loss: " + str(sum(losses) / len(losses)) + " avg tr accuracy: " + str(sum(accs) / len(accs)))
 
         # print("training loss: ", a)
