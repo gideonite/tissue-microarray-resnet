@@ -104,11 +104,11 @@ with tf.Session() as sess:
             ybatch = ytrain[batch_i : batch_i + batch_size]
 
             _, batchloss, a = sess.run([train_op, avg_loss, accuracy], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-    #         losses.append(batchloss)
-    #         accs.append(a)
+            losses.append(batchloss)
+            accs.append(a)
 
     #         # print("training accuracy: " + str(a))
 
-    #     print("epoch: " + str(epoch) + " " + " avg loss: " + str(sum(losses) / len(losses)) + " avg tr accuracy: " + str(sum(accs) / len(accs)))
+        print("epoch: " + str(epoch) + " " + " avg loss: " + str(sum(losses) / len(losses)) + " avg tr accuracy: " + str(sum(accs) / len(accs)))
 
         # print("training loss: ", a)
