@@ -102,16 +102,17 @@ def train(x, y,
     sess.run(init)
     num_examples = x.shape[0]
     for epoch_i in xrange(num_epochs):
+        batch_accuracies = []
         for batch_i in xrange(0, num_examples, batch_size):
             xbatch = x[batch_i : batch_i + batch_size]
             ybatch = y[batch_i : batch_i + batch_size]
 
-            _,_,a = sess.run([train_op, avg_loss, accuracy],
-                     feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+            _,_,acc = sess.run([train_op, avg_loss, accuracy],
+                               feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
 
-            print('epoch: ' + str(epoch_i) + ' batch: ' + str(batch_i/batch_size) + ' accuracy: ' + str(a))
+            batch_accuracies.append(acc)
 
-    return False
+        yield batch_accuracies
 
 with tf.Session() as sess:
     xtrain = mnist.train.images.reshape([-1, 28, 28, 1])
