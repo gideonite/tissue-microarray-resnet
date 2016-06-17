@@ -38,30 +38,41 @@ groups = [BottleneckGroup(3, 128, 32),
 ]
 
 def inference(xplaceholder):
-    with tf.variable_scope('layer1') as scope:
-        net = conv2d(xplaceholder, [3, 3], 64, [1,1,1,1])
-
+  # First convolution expands to 64 channels
+    with tf.variable_scope('first_conv_expand_layer'):
+        net = conv2d(xplaceholder, 64, [7, 7])
     net = tf.nn.max_pool(
         net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-    with tf.variable_scope('layer2') as scope:
-        net = conv2d(net, [3, 3], 64, [1,1,1,1])
+    for group_i, group in enumerate(groups):
+        for block_i in range(group.num_blocks):
+            name = 'group_%d/block_%d' % (group_i, block_i)
 
-    net = tf.nn.max_pool(
-        net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+            with tf.variable_scope(name + '/conv_in'):
+                with tf.variable_scope('layer1') as scope:
+                    net = conv2d(net, [3, 3], 64, [1,1,1,1])
 
-    with tf.variable_scope('layer3') as scope:
-        net = conv2d(net, [3, 3], 64, [1,1,1,1])
+                net = tf.nn.max_pool(
+                    net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-    net = tf.nn.max_pool(
-        net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+                with tf.variable_scope('layer2') as scope:
+                    net = conv2d(net, [3, 3], 64, [1,1,1,1])
 
-    with tf.variable_scope('skip_connection') as scope:
-        net = conv2d(xplaceholder, [7, 7], 64, [1,7,7,1]) + net
+                net = tf.nn.max_pool(
+                    net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-    with tf.variable_scope('fully_connected1') as scope:
-        flattened = flatten(net)
-        net = fully_connected(flattened, 1000)
+                with tf.variable_scope('layer3') as scope:
+                    net = conv2d(net, [3, 3], 64, [1,1,1,1])
+
+                net = tf.nn.max_pool(
+                    net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
+                with tf.variable_scope('skip_connection') as scope:
+                    net = conv2d(xplaceholder, [7, 7], 64, [1,7,7,1]) + net
+
+        with tf.variable_scope('fully_connected1') as scope:
+            flattened = flatten(net)
+            net = fully_connected(flattened, 1000)
 
     return net
 
