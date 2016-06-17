@@ -47,10 +47,10 @@ def inference(xplaceholder):
     for group_i, group in enumerate(groups):
         for block_i in range(group.num_blocks):
             name = 'group_%d/block_%d' % (group_i, block_i)
-
+            
             with tf.variable_scope(name + '/conv_in'):
                 conv = conv2d(net, [1, 1], group.bottleneck_size, [1, 1, 1, 1])
-
+                
             with tf.variable_scope(name + '/conv_bottleneck'):
                 conv = conv2d(net, [3, 3], group.bottleneck_size, [1, 1, 1, 1])
 
@@ -59,6 +59,12 @@ def inference(xplaceholder):
                 conv = conv2d(net, [3, 3], outdim, [1, 1, 1, 1])
 
             net = conv + net
+        try:
+            next_group = groups[group_i+1]
+            with tf.variable_scope('block_%d/conv_upscale' % group_i):
+                net = conv2d(net, [1, 1], next_group.num_filters, [1, 1, 1, 1])
+        except IndexError:
+            pass
 
     return net
 
