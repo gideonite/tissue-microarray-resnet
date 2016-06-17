@@ -49,34 +49,20 @@ def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride)
             ret.append(patch[patch_size/2, patch_size/2] - 1)
     return ret
 
-file_nums = list(range(1,225))
-random.shuffle(file_nums)
-def dataset(num_images=len(file_nums), train_test_split=0.8):
+_file_nums = list(range(1,225))
+random.shuffle(_file_nums)
+def dataset(num_images=len(_file_nums)):
     print('reading ' + str(num_images) + ' images')
     print('patch_size=' + str(FLAGS.patch_size) + ' stride=' + str(FLAGS.stride))
-    xtrain = []
-    ytrain = []
-    xtest = []
-    ytest = []
 
-    for file_num in file_nums[:int(train_test_split * num_images)]:
+    xdata, ydata = [], []
+    for file_num in _file_nums[:num_images]:
         patches = _patches(img_filename %(file_num))
         labels = _patch_labels(label_filename %(file_num))
-
         assert len(patches) == len(labels)
 
         for i in xrange(len(patches)):
-            xtrain.append(patches[i])
-            ytrain.append(labels[i])
+            xdata.append(patches[i])
+            ydata.append(labels[i])
 
-    for file_num in file_nums[int(train_test_split * num_images):num_images]:
-        patches = _patches(img_filename %(file_num))
-        labels = _patch_labels(label_filename %(file_num))
-
-        assert len(patches) == len(labels)
-
-        for i in xrange(len(patches)):
-            xtest.append(patches[i])
-            ytest.append(labels[i])
-
-    return np.array(xtrain), np.array(ytrain), np.array(xtest), np.array(ytest)
+    return np.array(xdata), np.array(ydata)
