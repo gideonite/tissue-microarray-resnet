@@ -80,7 +80,6 @@ def train_ops(xplaceholder,
           learning_rate=0.01):
 
     preds = inference(xplaceholder, num_classes)
-
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder,
                                                                    name='crossentropy')
     avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
