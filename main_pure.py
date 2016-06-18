@@ -32,7 +32,8 @@ def main(_):
     xtrain, xtest, ytrain, ytest = train_test_split(
         xdata, ydata, test_size=0.2, random_state=42)
 
-    log = {'train_accs': [],
+    log = {'architecture': resnet_pure.groups,
+           'train_accs': [],
            'test_accs': [],
            'num_epochs': FLAGS.num_epochs,
            'timestamp': timestamp,
@@ -80,7 +81,7 @@ def main(_):
             log['train_accs'].append(train_accs)
             test_acc = sum(test_accs) / len(test_accs)
             log['test_accs'].append(str(train_acc))
-            print("epoch: %d test_accuracy=%d" %(epoch_i, test_acc))
+            print("epoch: %d test_accuracy=%f" %(epoch_i, test_acc))
 
             with open(resultspath, 'w+') as logfile:
                 json.dump(log, logfile, indent=2)
