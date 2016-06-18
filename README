@@ -1,0 +1,5 @@
+Reference implementations:
+
+https://github.com/xuyuwei/resnet-tf
+https://github.com/ry/tensorflow-resnet
+https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/skflow/resnet.py
