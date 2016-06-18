@@ -73,23 +73,11 @@ def inference(xplaceholder, num_classes):
     net = fully_connected(net, num_classes)
     return net
 
-def train(xtrain,
-          ytrain,
-          xtest,
-          ytest,
+def train_ops(xplaceholder,
+          yplaceholder,
           num_classes,
-          batch_size,
-          num_epochs,
-          sess,
           optimizer=tf.train.GradientDescentOptimizer,
           learning_rate=0.01):
-
-    example = xtrain[0]
-    assert example.shape[0] == example.shape[1]
-    ndim = example.shape[0]
-    num_channels = example.shape[2]
-    xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
-    yplaceholder = tf.placeholder(tf.int64, shape=(None))
 
     preds = inference(xplaceholder, num_classes)
 
@@ -101,20 +89,31 @@ def train(xtrain,
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1),
                                                yplaceholder), tf.float32))
 
-    init = tf.initialize_all_variables()
-    sess.run(init)
-    num_examples = xtrain.shape[0]
-    for epoch_i in xrange(num_epochs):
-        train_accs = []
-        for batch_i in xrange(0, num_examples, batch_size):
-            xbatch = xtrain[batch_i : batch_i + batch_size]
-            ybatch = ytrain[batch_i : batch_i + batch_size]
+    return train_op, preds, avg_loss, accuracy
 
-            _,_,train_acc = sess.run([train_op, avg_loss, accuracy],
-                               feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+    # init = tf.initialize_all_variables()
+    # sess.run(init)
+    # num_examples = xtrain.shape[0]
+    # for epoch_i in xrange(num_epochs):
+    #     train_accs = []
+    #     for batch_i in xrange(0, num_examples, batch_size):
+    #         xbatch = xtrain[batch_i : batch_i + batch_size]
+    #         ybatch = ytrain[batch_i : batch_i + batch_size]
 
-            train_accs.append(train_acc)
+    #         _,_,train_acc = sess.run([train_op, avg_loss, accuracy],
+    #                            feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
 
-        test_acc = sess.run(acc, feed_dict={xplaceholder: xtest, yplaceholder: ytest})
+    #         train_accs.append(train_acc)
 
-        yield train_accs, test_acc
+        # test_acc = 0
+        # for batch_i in xrange(0, xtest.shape[0], batch_size):
+        #     xbatch = xtest[batch_i : batch_i + batch_size]
+        #     ybatch = ytest[batch_i : batch_i + batch_size]
+
+        #     _,_,train_acc = sess.run([train_op, avg_loss, accuracy],
+        #                        feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+
+        #     test_acc += sess.run(accuracy, feed_dict={xplaceholder: xtest, yplaceholder: ytest})
+
+        # yield train_accs
+        # , test_acc / xtrain.shape[0]
