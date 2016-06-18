@@ -21,7 +21,11 @@ flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
 flags.DEFINE_integer('num_images', 10, '')
 
 def main(_):
-    xdata, ydata = cedars_sinai_etl.dataset(num_images=FLAGS.num_images)
+    if FLAGS.num_images != -1:
+        xdata, ydata = cedars_sinai_etl.dataset(num_images=FLAGS.num_images)
+    else:
+        xdata, ydata = cedars_sinai_etl.dataset()
+
     ndim = int(sqrt(xdata.shape[1] / 3))
     xdata = xdata.reshape(-1, ndim, ndim, 3)
 
