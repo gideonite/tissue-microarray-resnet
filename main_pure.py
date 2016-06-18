@@ -13,14 +13,15 @@ FLAGS = flags.FLAGS
 
 timestamp = str(time.time())
 
-flags.DEFINE_string('cache_basepath', '/mnt/data/', '')
+flags.DEFINE_string('cache_basepath', '/mnt/data/models/', '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
-flags.DEFINE_string('experiment_name', str(timestamp), '')
+flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
+flags.DEFINE_integer('num_images', 10, '')
 
 def main(_):
-    xdata, ydata = cedars_sinai_etl.dataset(num_images=5)
+    xdata, ydata = cedars_sinai_etl.dataset(num_images=FLAGS.num_images)
     ndim = int(sqrt(xdata.shape[1] / 3))
     xdata = xdata.reshape(-1, ndim, ndim, 3)
 
@@ -29,7 +30,7 @@ def main(_):
 
     log = {'train_accs': [],
            'test_accs': [],
-           'num_epochs': 20,
+           'num_epochs': FLAGS.num_epochs,
            'timestamp': timestamp,
            'experiment_name': FLAGS.experiment_name,
            'batch_size': FLAGS.batch_size,
@@ -52,32 +53,33 @@ def main(_):
         sess.run(init)
         for epoch_i in xrange(FLAGS.num_epochs):
             train_accs = []
-            for batch_i in xrange(0, num_examples, FLAGS.batch_size):
+            for batch_i in xrange(0, num_examples / 100, FLAGS.batch_size):
                 xbatch = xtrain[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytrain[batch_i : batch_i + FLAGS.batch_size]
                 
                 _, train_loss, train_acc = sess.run([train_step, loss, accuracy],
                                                  feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
 
-                train_accs.append(train_acc)
+                # stringify for JSON serialization
+                train_accs.append(str(train_acc))
 
                 print("epoch: %d batch: %d training_accuracy=%f" %(epoch_i, batch_i/FLAGS.batch_size, train_acc))
 
-            saver.save(savepath)
+            saver.save(sess, savepath)
 
-            test_acc = 0
-            for batch_i in xrange(0, num_examples, FLAGS.batch_size):
+            test_accs = []
+            for batch_i in xrange(0, xtest.shape[0], FLAGS.batch_size):
                 xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
-                test_acc += sess.run([accuracy], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+                test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
 
             log['train_accs'].append(train_accs)
-            log['test_accs'].append(test_acc / len(test_acc))
+            test_acc = sum(test_accs) / len(test_accs)
+            log['test_accs'].append(str(train_acc))
             print("epoch: %d test_accuracy=%d" %(epoch_i, test_acc))
 
-        # clobber it each time
-        with open(resultspath, 'w+') as logfile:
-            json.dump(log, logfile)
+            with open(resultspath, 'w+') as logfile:
+                json.dump(log, logfile, indent=2)
         
 if __name__ == '__main__':
     tf.app.run()
