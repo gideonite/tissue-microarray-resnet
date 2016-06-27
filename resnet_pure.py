@@ -12,7 +12,7 @@ def fully_connected(x, outdim, activation=tf.nn.relu):
     indim = x.get_shape()[-1].value
     weights = get_variable('weights', [indim, outdim])
     biases = tf.get_variable('biases', [outdim], initializer=tf.constant_initializer(0.0))
-    return activation(tf.matmul(x, weights) + biases)
+    return tf.matmul(x, weights) + biases
 
 def conv2d(x, filter_shape, num_channels, stride):
     weights = get_variable('weights', filter_shape + [x.get_shape()[-1].value, num_channels])
