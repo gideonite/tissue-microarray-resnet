@@ -36,7 +36,6 @@ def _patches(imgfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
         for y in range(int((img.shape[1]-patch_size+1)/stride)):
             patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
             ret.append(patch.flatten())
-
     return ret
 
 def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
@@ -49,7 +48,9 @@ def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride)
     for x in range(int((img.shape[0]-patch_size+1)/stride)):
         for y in range(int((img.shape[1]-patch_size+1)/stride)):
             patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
-            ret.append(patch[patch_size/2, patch_size/2] - 1)
+            label_value = patch[patch_size/2, patch_size/2]
+            label_value -= 1 # need to start from 0.
+            ret.append(label_value)
     return ret
 
 _file_nums = list(range(1,225))
