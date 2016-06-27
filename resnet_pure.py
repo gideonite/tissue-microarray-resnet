@@ -89,30 +89,3 @@ def train_ops(xplaceholder,
                                                yplaceholder), tf.float32))
 
     return train_op, preds, avg_loss, accuracy
-
-    # init = tf.initialize_all_variables()
-    # sess.run(init)
-    # num_examples = xtrain.shape[0]
-    # for epoch_i in xrange(num_epochs):
-    #     train_accs = []
-    #     for batch_i in xrange(0, num_examples, batch_size):
-    #         xbatch = xtrain[batch_i : batch_i + batch_size]
-    #         ybatch = ytrain[batch_i : batch_i + batch_size]
-
-    #         _,_,train_acc = sess.run([train_op, avg_loss, accuracy],
-    #                            feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-
-    #         train_accs.append(train_acc)
-
-        # test_acc = 0
-        # for batch_i in xrange(0, xtest.shape[0], batch_size):
-        #     xbatch = xtest[batch_i : batch_i + batch_size]
-        #     ybatch = ytest[batch_i : batch_i + batch_size]
-
-        #     _,_,train_acc = sess.run([train_op, avg_loss, accuracy],
-        #                        feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-
-        #     test_acc += sess.run(accuracy, feed_dict={xplaceholder: xtest, yplaceholder: ytest})
-
-        # yield train_accs
-        # , test_acc / xtrain.shape[0]
