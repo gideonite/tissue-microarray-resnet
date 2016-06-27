@@ -32,8 +32,8 @@ def _patches(imgfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
         raise Exception("File not found: " + '"' + imgfilename + '"')
     img = img.astype('float32')
     ret = []
-    for x in range((img.shape[0]-patch_size+1)/stride):
-        for y in range((img.shape[1]-patch_size+1)/stride):
+    for x in range(int((img.shape[0]-patch_size+1)/stride)):
+        for y in range(int((img.shape[1]-patch_size+1)/stride)):
             patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
             ret.append(patch.flatten())
 
@@ -46,8 +46,8 @@ def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride)
     '''
     img = sio.loadmat(matfilename)['ATmask']
     ret = []
-    for x in range((img.shape[0]-patch_size+1)/stride):
-        for y in range((img.shape[1]-patch_size+1)/stride):
+    for x in range(int((img.shape[0]-patch_size+1)/stride)):
+        for y in range(int((img.shape[1]-patch_size+1)/stride)):
             patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
             ret.append(patch[patch_size/2, patch_size/2] - 1)
     return ret
