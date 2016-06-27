@@ -27,7 +27,10 @@ def _patches(imgfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
     channel], and creates an iterator over all patches in the imagine
     defined by the `patch_size` and the `stride` length.
     '''
-    img = cv2.imread(imgfilename).astype('float32')
+    img = cv2.imread(imgfilename)
+    if img is None:
+        raise Exception("File not found: " + '"' + imgfilename + '"')
+    img = img.astype('float32')
     ret = []
     for x in range((img.shape[0]-patch_size+1)/stride):
         for y in range((img.shape[1]-patch_size+1)/stride):

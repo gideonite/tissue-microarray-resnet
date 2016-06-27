@@ -48,7 +48,7 @@ def main(_):
     num_channels = example.shape[2]
     xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
-    train_step, preds, loss, accuracy = resnet_pure.train_ops(xplaceholder, yplaceholder, num_classes=4)
+    train_step, preds, loss, accuracy = resnet_pure.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
