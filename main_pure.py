@@ -61,7 +61,7 @@ def main(_):
             for batch_i in xrange(0, num_examples / 100, FLAGS.batch_size):
                 xbatch = xtrain[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytrain[batch_i : batch_i + FLAGS.batch_size]
-                
+
                 _, train_loss, train_acc = sess.run([train_step, loss, accuracy],
                                                  feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
 
@@ -85,6 +85,6 @@ def main(_):
 
             with open(resultspath, 'w+') as logfile:
                 json.dump(log, logfile, indent=2)
-        
+
 if __name__ == '__main__':
     tf.app.run()
