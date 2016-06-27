@@ -69,4 +69,7 @@ def dataset(num_images=len(_file_nums)):
             xdata.append(patches[i])
             ydata.append(labels[i])
 
-    return np.array(xdata), np.array(ydata)
+    idx = np.array(list(range(len(xdata))))
+    np.random.shuffle(idx)
+
+    return np.array(xdata)[idx], np.array(ydata)[idx]
