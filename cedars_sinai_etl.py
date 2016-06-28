@@ -56,9 +56,6 @@ def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride)
 _file_nums = list(range(1,225))
 random.shuffle(_file_nums)
 def dataset(num_images=len(_file_nums)):
-    print('reading ' + str(num_images) + ' images')
-    print('patch_size=' + str(FLAGS.patch_size) + ' stride=' + str(FLAGS.stride))
-
     xdata, ydata = [], []
     for file_num in _file_nums[:num_images]:
         patches = _patches(img_filename %(file_num))

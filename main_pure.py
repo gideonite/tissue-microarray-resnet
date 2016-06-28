@@ -4,6 +4,7 @@ import tensorflow as tf
 import json
 from math import sqrt
 import time
+import sys
 
 import cedars_sinai_etl
 import resnet_pure
@@ -36,11 +37,14 @@ def main(_):
            'train_accs': [],
            'test_accs': [],
            'num_epochs': FLAGS.num_epochs,
+           'num_images': FLAGS.num_images,
            'timestamp': timestamp,
            'experiment_name': FLAGS.experiment_name,
            'batch_size': FLAGS.batch_size,
            'patch_size': FLAGS.patch_size,
            'stride': FLAGS.stride}
+
+    json.dump(log, sys.stdout, indent=2)
 
     example = xtrain[0]
     assert example.shape[0] == example.shape[1]
@@ -58,7 +62,7 @@ def main(_):
         sess.run(init)
         for epoch_i in xrange(FLAGS.num_epochs):
             train_accs = []
-            for batch_i in xrange(0, num_examples / 100, FLAGS.batch_size):
+            for batch_i in xrange(0, num_examples, FLAGS.batch_size):
                 xbatch = xtrain[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytrain[batch_i : batch_i + FLAGS.batch_size]
 
