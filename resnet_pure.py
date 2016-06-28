@@ -1,9 +1,6 @@
 from collections import namedtuple
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
 from math import sqrt
-
-mnist = input_data.read_data_sets('/tmp/MNIST_data')
 
 def get_variable(name, shape):
     return tf.get_variable(name, shape, initializer=tf.contrib.layers.xavier_initializer())
