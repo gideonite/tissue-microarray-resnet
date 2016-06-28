@@ -85,7 +85,7 @@ def main(_):
             log['train_accs'].append(train_accs)
             test_acc = sum(test_accs) / len(test_accs)
             log['test_accs'].append(str(train_acc))
-            print("epoch: %d test_accuracy=%f" %(epoch_i, test_acc))
+            print("%s\t epoch: %d test_accuracy=%f" %(FLAGS.experiment_name, epoch_i, test_acc))
 
             with open(resultspath, 'w+') as logfile:
                 json.dump(log, logfile, indent=2)
