@@ -5,6 +5,7 @@ import json
 from math import sqrt
 import time
 import sys
+import os.path
 
 import cedars_sinai_etl
 import resnet_pure
@@ -22,10 +23,10 @@ flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
 flags.DEFINE_integer('num_images', 10, '')
 
 def maybe_load_logfile(path):
-    try:
-        with open(path, 'w+') as logfile:
-            log = json.load(logfile)
-    except (IOError, ValueError):
+    if os.path.exists(path):
+        with open(path) as f:
+            log = json.load(f)
+    else:
         print("creating new experiment from scratch in '" + path + "'")
         log = {'cmd': " ".join(sys.argv), # TODO, want to separate cmd line args from code to automatically restart experiments.
                'architecture': resnet_pure.groups,
@@ -67,7 +68,7 @@ def main(_):
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
-    savepath = FLAGS.cache_basepath + FLAGS.experiment_name
+    savepath = FLAGS.cache_basepath + FLAGS.experiment_name + ".checkpoint"
     with tf.Session() as sess:
         sess.run(init)
         try:
