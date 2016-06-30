@@ -20,10 +20,11 @@ flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
-flags.DEFINE_integer('num_images', 10, '')
+flags.DEFINE_integer('num_images', -1, '')
+flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
 
 def maybe_load_logfile(path):
-    if os.path.exists(path):
+    if os.path.exists(path) and not FLAGS.clobber:
         with open(path) as f:
             log = json.load(f)
     else:
@@ -72,7 +73,10 @@ def main(_):
     with tf.Session() as sess:
         sess.run(init)
         try:
-            saver.restore(sess, savepath)
+            if not FLAGS.clobber:
+                saver.restore(sess, savepath)
+            else:
+                raise ValueError # TODO hack
         except ValueError:
             # test on the randomly intialized model
             test_accs = []
@@ -90,6 +94,7 @@ def main(_):
                 xbatch = xtrain[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytrain[batch_i : batch_i + FLAGS.batch_size]
 
+                # TODO optimize, don't need to track acc if you are already tracking loss.
                 _, train_loss, train_acc = sess.run([train_step, loss, accuracy],
                                                  feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
 
