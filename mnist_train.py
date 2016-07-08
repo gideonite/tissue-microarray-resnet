@@ -8,18 +8,23 @@ import os.path
 
 import resnet
 
+from tensorflow.examples.tutorials.mnist import input_data
+
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 timestamp = str(time.time())
 
-flags.DEFINE_string('cache_basepath', '/mnt/data/models/', '')
+# TODO this is fucked.
+# flags.DEFINE_string('cache_basepath', '/mnt/data/models/', '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
-flags.DEFINE_integer('num_images', -1, '')
 flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
+
+# TODO dup with cedars_sinai_etl
+flags.DEFINE_integer('stride', 32, 'Stride between patches')
 
 def maybe_load_logfile(path):
     if os.path.exists(path) and not FLAGS.clobber:
@@ -28,30 +33,24 @@ def maybe_load_logfile(path):
     else:
         print("creating new experiment from scratch in '" + path + "'")
         log = {'cmd': " ".join(sys.argv), # TODO, want to separate cmd line args from code to automatically restart experiments.
-               'architecture': resnet_pure.groups,
+               'architecture': resnet.groups,
                'train_accs': [],
                'test_accs': [],
                'num_epochs': FLAGS.num_epochs,
-               'num_images': FLAGS.num_images,
                'timestamp': timestamp,
+               'dataset': 'mnist',
                'experiment_name': FLAGS.experiment_name,
-               'batch_size': FLAGS.batch_size,
-               'patch_size': FLAGS.patch_size,
                'stride': FLAGS.stride}
 
     return log
 
 def main(_):
-    if FLAGS.num_images != -1:
-        xdata, ydata = cedars_sinai_etl.dataset(num_images=FLAGS.num_images)
-    else:
-        xdata, ydata = cedars_sinai_etl.dataset()
+    mnist = input_data.read_data_sets('MNIST_data')
+    xtrain, xtest, ytrain, ytest = mnist.train.images, mnist.test.images, \
+                                   mnist.train.labels, mnist.test.labels
 
-    ndim = int(sqrt(xdata.shape[1] / 3))
-    xdata = xdata.reshape(-1, ndim, ndim, 3)
-
-    xtrain, xtest, ytrain, ytest = train_test_split(
-        xdata, ydata, test_size=0.2, random_state=42)
+    num_channels = 1
+    ndim = int(sqrt(xtrain.shape[1] / num_channels)) # assuming the images are square
 
     resultspath = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
     log = maybe_load_logfile(resultspath)
@@ -63,7 +62,7 @@ def main(_):
     num_channels = example.shape[2]
     xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
-    train_step, preds, loss, accuracy = resnet_pure.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
+    train_step, preds, loss, accuracy = resnet.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
@@ -117,5 +116,5 @@ def main(_):
             with open(resultspath, 'w+') as logfile:
                 json.dump(log, logfile, indent=2)
 
-# if __name__ == '__main__':
-#     tf.app.run()
+if __name__ == '__main__':
+    tf.app.run()
