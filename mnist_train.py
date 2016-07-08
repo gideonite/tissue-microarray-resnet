@@ -80,7 +80,7 @@ def main(_):
         except ValueError:
             # test on the randomly intialized model
             test_accs = []
-            for batch_i in xrange(0, xtest.shape[0], FLAGS.batch_size):
+            for batch_i in range(0, xtest.shape[0], FLAGS.batch_size): # TODO xrange vs range ??
                 xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
                 test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
@@ -88,9 +88,9 @@ def main(_):
             log['test_accs'].append(str(test_acc))
             print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
 
-        for epoch_i in xrange(FLAGS.num_epochs):
+        for epoch_i in range(FLAGS.num_epochs):
             train_accs = []
-            for batch_i in xrange(0, num_examples, FLAGS.batch_size):
+            for batch_i in range(0, num_examples, FLAGS.batch_size):
                 xbatch = xtrain[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytrain[batch_i : batch_i + FLAGS.batch_size]
 
@@ -106,7 +106,7 @@ def main(_):
             saver.save(sess, savepath)
 
             test_accs = []
-            for batch_i in xrange(0, xtest.shape[0], FLAGS.batch_size):
+            for batch_i in range(0, xtest.shape[0], FLAGS.batch_size):
                 xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
                 test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
