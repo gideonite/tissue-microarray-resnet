@@ -16,7 +16,7 @@ FLAGS = flags.FLAGS
 timestamp = str(time.time())
 
 # TODO this is fucked.
-# flags.DEFINE_string('cache_basepath', '/mnt/data/models/', '')
+flags.DEFINE_string('cache_basepath', '/mnt/data/models/', '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
@@ -51,6 +51,9 @@ def main(_):
 
     num_channels = 1
     ndim = int(sqrt(xtrain.shape[1] / num_channels)) # assuming the images are square
+
+    xtrain = xtrain.reshape(-1, ndim, ndim, num_channels)
+    xtest = xtest.reshape(-1, ndim, ndim, num_channels)
 
     resultspath = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
     log = maybe_load_logfile(resultspath)
