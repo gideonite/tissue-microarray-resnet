@@ -1,3 +1,9 @@
+"""
+TODO some more docs.
+
+Reference Paper: http://arxiv.org/pdf/1512.03385.pdf
+"""
+
 from collections import namedtuple
 import tensorflow as tf
 from math import sqrt
