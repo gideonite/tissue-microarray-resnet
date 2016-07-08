@@ -1,4 +1,3 @@
-from sklearn import metrics
 from sklearn.cross_validation import train_test_split
 import tensorflow as tf
 import json
