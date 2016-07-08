@@ -1,4 +1,4 @@
-from sklearn.cross_validation import train_test_split
+# from sklearn.cross_validation import train_test_split # TODO
 import tensorflow as tf
 import json
 from math import sqrt
@@ -6,8 +6,7 @@ import time
 import sys
 import os.path
 
-import cedars_sinai_etl
-import resnet_pure
+import resnet
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -118,5 +117,5 @@ def main(_):
             with open(resultspath, 'w+') as logfile:
                 json.dump(log, logfile, indent=2)
 
-if __name__ == '__main__':
-    tf.app.run()
+# if __name__ == '__main__':
+#     tf.app.run()
