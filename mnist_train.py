@@ -1,4 +1,3 @@
-# from sklearn.cross_validation import train_test_split # TODO
 import tensorflow as tf
 import json
 from math import sqrt
@@ -45,7 +44,7 @@ def maybe_load_logfile(path):
     return log
 
 def main(_):
-    mnist = input_data.read_data_sets('MNIST_data')
+    mnist = input_data.read_data_sets('/mnt/data/MNIST_data')
     xtrain, xtest, ytrain, ytest = mnist.train.images, mnist.test.images, \
                                    mnist.train.labels, mnist.test.labels
 
