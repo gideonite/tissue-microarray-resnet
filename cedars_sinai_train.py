@@ -52,7 +52,7 @@ def main(_):
     xdata = xdata.reshape(-1, ndim, ndim, 3)
 
     xtrain, xtest, ytrain, ytest = train_test_split(
-        xdata, ydata, test_size=0.2, random_state=42)
+        xdata, ydata, test_size=0.2, random_state=42) # TODO
 
     resultspath = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
     log = maybe_load_logfile(resultspath)
