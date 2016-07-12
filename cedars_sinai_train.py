@@ -71,6 +71,7 @@ def main(_):
     savepath = FLAGS.cache_basepath + FLAGS.experiment_name + ".checkpoint"
     with tf.Session() as sess:
         sess.run(init)
+        # summary_writer = tf.train.SummaryWriter(savepath, sess.graph_def)
         try:
             if not FLAGS.clobber:
                 saver.restore(sess, savepath)
