@@ -7,15 +7,16 @@ details about the curation, annotation and so on.
 
 ** Description
 
-There are 225 images. They are tiled with a stride of tile length
-/ 2. The class is selected from the center pixel (rounded down if
-length is even).
+There are 225 images. In this analysis, they are tiled with a stride
+of tile length / 2. The class is selected from the center pixel
+(rounded down if length is even). Experiments are run with patch sizes
+of 32, 64, 128.
 
-AT masks are used. There are 4 pixel-wise classes.
+AT masks are used. There are 4 pixel-wise classes in this data.
 
 * Model
   
-It is a ResNet model with bottleneck blocks. 
+ResNet model with bottleneck blocks. 
 
 There are 4 bottleneck groups, each one hsa 3 bottleneck blocks, each
 block has 3 layers --- an expansion layer which does 1x1 convolution
@@ -39,3 +40,14 @@ correspond to the Cedars-Sinai paper?
 
 Should I use Jaccard index as well even though it seems wrong and
 somewhat convoluted?
+
+* Next Steps
+
+- confusion matrix
+- overlay of predictions --> stride of 1
+- segmentation by classification
+- fully convolutional neural networks
+- predict percentage?
+- predict grade? predict high-low?
+- other datasets (MSK data)
+- eventually need to talk to a pathologist
