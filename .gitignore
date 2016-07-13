@@ -3,3 +3,5 @@ models
 *.pyc
 notebooks
 \#*\#
+notes.tex
+notes.pdf
