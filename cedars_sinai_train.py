@@ -14,13 +14,13 @@ FLAGS = flags.FLAGS
 
 timestamp = str(time.time())
 
-flags.DEFINE_string('cache_basepath', '/mnt/data/models/', '')
+flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
 flags.DEFINE_integer('num_images', -1, '')
-flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
+flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not') # TODO bring back clobber
 
 def maybe_load_logfile(path):
     if os.path.exists(path) and not FLAGS.clobber:
@@ -41,6 +41,12 @@ def maybe_load_logfile(path):
                'stride': FLAGS.stride}
 
     return log
+
+def mkdir(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    return directory
 
 def main(_):
     if FLAGS.num_images != -1:
@@ -68,29 +74,27 @@ def main(_):
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
-    savepath = FLAGS.cache_basepath + FLAGS.experiment_name + ".checkpoint"
+
+    summaries_path = mkdir('/'.join([FLAGS.cache_basepath, "summaries", FLAGS.experiment_name]))
+    models_path = mkdir('/'.join([FLAGS.cache_basepath, "models", FLAGS.experiment_name])) + '/' + FLAGS.experiment_name
+
     with tf.Session() as sess:
         sess.run(init)
-        # summary_writer = tf.train.SummaryWriter(savepath, sess.graph_def)
-        try:
-            if not FLAGS.clobber:
-                saver.restore(sess, savepath)
-            else:
-                raise ValueError # TODO hack
-        except ValueError:
-            # test on the randomly intialized model
-            test_accs = []
-            for batch_i in xrange(0, xtest.shape[0], FLAGS.batch_size):
-                xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
-                ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
-                test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
-            test_acc = sum(test_accs) / len(test_accs)
-            log['test_accs'].append(str(test_acc))
-            print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
+        summary_writer = tf.train.SummaryWriter(summaries_path, sess.graph)
+
+        # test on the randomly intialized model
+        test_accs = []
+        for batch_i in xrange(0, xtest.shape[0], FLAGS.batch_size):
+            xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
+            ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
+            test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
+        test_acc = sum(test_accs) / len(test_accs)
+        log['test_accs'].append(str(test_acc))
+        print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
 
         for epoch_i in xrange(FLAGS.num_epochs):
             train_accs = []
-            for batch_i in xrange(0, num_examples, FLAGS.batch_size):
+            for batch_i in xrange(0, 10, FLAGS.batch_size):
                 xbatch = xtrain[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytrain[batch_i : batch_i + FLAGS.batch_size]
 
@@ -103,7 +107,7 @@ def main(_):
 
                 print("epoch: %d batch: %d training_accuracy=%f" %(epoch_i+1, batch_i/FLAGS.batch_size, train_acc))
 
-            saver.save(sess, savepath)
+            saver.save(sess, models_path)
 
             test_accs = []
             for batch_i in xrange(0, xtest.shape[0], FLAGS.batch_size):
