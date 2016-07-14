@@ -51,7 +51,7 @@ def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride)
             ret.append(label_value)
     return ret
 
-def dataset(path='.', split=0.8, num_images=225, random_seed=1337):
+def dataset(path='.', split=0.8, random_seed=1337):
     '''
     Returns shuffled training data of paired patches with
     labels. Returns a tuple, (X, y).
@@ -73,7 +73,9 @@ def dataset(path='.', split=0.8, num_images=225, random_seed=1337):
         np.random.seed(random_seed)
 
     xdata, ydata = [], []
-    for file_num in range(1, num_images):
+    # num_images=224
+    num_images=1 # TODO
+    for file_num in range(1, num_images+1):
         patches = _patches(img_filename %(file_num))
         labels = _patch_labels(label_filename %(file_num))
         assert len(patches) == len(labels)
@@ -96,11 +98,10 @@ def dataset(path='.', split=0.8, num_images=225, random_seed=1337):
     ytrain = ydata[:pivot]
     ytest = ydata[pivot:]
 
-    np.save(path + '/xtrain.npy', xtrain)
-    np.save(path + '/xtest.npy', xtest)
-    np.save(path + '/ytrain.npy', ytrain)
-    np.save(path + '/ytest.npy', ytest)
+    import pdb; pdb.set_trace()
+    np.save(path + 'xtrain.npy', xtrain)
+    np.save(path + 'xtest.npy', xtest)
+    np.save(path + 'ytrain.npy', ytrain)
+    np.save(path + 'ytest.npy', ytest)
 
     return xtrain, xtest, ytrain, ytest
-
-dataset()

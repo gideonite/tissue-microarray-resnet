@@ -14,12 +14,11 @@ FLAGS = flags.FLAGS
 
 timestamp = str(time.time())
 
-flags.DEFINE_string('cache_basepath', '/mnt/data/models/', '')
+flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
-flags.DEFINE_integer('num_images', -1, '')
 flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
 
 def maybe_load_logfile(path):
@@ -33,7 +32,6 @@ def maybe_load_logfile(path):
                'train_accs': [],
                'test_accs': [],
                'num_epochs': FLAGS.num_epochs,
-               'num_images': FLAGS.num_images,
                'timestamp': timestamp,
                'experiment_name': FLAGS.experiment_name,
                'batch_size': FLAGS.batch_size,
@@ -43,16 +41,11 @@ def maybe_load_logfile(path):
     return log
 
 def main(_):
-    if FLAGS.num_images != -1:
-        xdata, ydata = cedars_sinai_etl.dataset(num_images=FLAGS.num_images)
-    else:
-        xdata, ydata = cedars_sinai_etl.dataset()
+    xtrain, xtest, ytrain, ytest = cedars_sinai_etl.dataset(path=FLAGS.cache_basepath)
 
-    ndim = int(sqrt(xdata.shape[1] / 3))
-    xdata = xdata.reshape(-1, ndim, ndim, 3)
-
-    xtrain, xtest, ytrain, ytest = train_test_split(
-        xdata, ydata, test_size=0.2, random_state=42) # TODO
+    ndim = int(sqrt(xtrain.shape[1] / 3))
+    xtrain = xtrain.reshape(-1, ndim, ndim, 3)
+    xtest = xtest.reshape(-1, ndim, ndim, 3)
 
     resultspath = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
     log = maybe_load_logfile(resultspath)
@@ -71,7 +64,6 @@ def main(_):
     savepath = FLAGS.cache_basepath + FLAGS.experiment_name + ".checkpoint"
     with tf.Session() as sess:
         sess.run(init)
-        # summary_writer = tf.train.SummaryWriter(savepath, sess.graph_def)
         try:
             if not FLAGS.clobber:
                 saver.restore(sess, savepath)
@@ -117,7 +109,7 @@ def main(_):
             print("%s\t epoch: %d test_accuracy=%f" %(FLAGS.experiment_name, epoch_i+1, test_acc))
 
             with open(resultspath, 'w+') as logfile:
-                json.dump(log, logfile, indent=2)
+                json.dump(log, logfile, indent=4)
 
 if __name__ == '__main__':
     tf.app.run()
