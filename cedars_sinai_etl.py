@@ -69,12 +69,12 @@ def dataset(path='.', split=0.8, random_seed=1337):
         ytest = np.load(path + '/ytest.npy')
         return xtrain, xtest, ytrain, ytest
 
+    print('creating new data for training and testing')
     if random_seed:
         np.random.seed(random_seed)
 
     xdata, ydata = [], []
-    # num_images=224
-    num_images=1 # TODO
+    num_images=224
     for file_num in range(1, num_images+1):
         patches = _patches(img_filename %(file_num))
         labels = _patch_labels(label_filename %(file_num))

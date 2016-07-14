@@ -8,6 +8,7 @@ import os.path
 
 import cedars_sinai_etl
 import resnet_pure
+import numpy as np
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -17,6 +18,7 @@ timestamp = str(time.time())
 flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
+flags.DEFINE_float('frac_of_data', 1.0, 'Fraction of training data to use')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
 flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
@@ -43,9 +45,13 @@ def maybe_load_logfile(path):
 def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
+         
+    return path
 
 def main(_):
     xtrain, xtest, ytrain, ytest = cedars_sinai_etl.dataset(path=FLAGS.cache_basepath)
+    xtrain = xtrain[:int(len(xtrain)*FLAGS.frac_of_data),:]
+    ytrain = ytrain[:int(len(ytrain)*FLAGS.frac_of_data)]
 
     ndim = int(sqrt(xtrain.shape[1] / 3))
     xtrain = xtrain.reshape(-1, ndim, ndim, 3)
@@ -53,6 +59,8 @@ def main(_):
 
     resultspath = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
     log = maybe_load_logfile(resultspath)
+    log['num_training_examples'] = len(xtrain)
+    log['num_test_examples'] = len(xtest)
     json.dump(log, sys.stdout, indent=2)
 
     example = xtrain[0]
@@ -67,7 +75,7 @@ def main(_):
     saver = tf.train.Saver()
 
     savepath = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
-        + FLAGS.experiment_name + '.checkpoint'
+        + '/' + FLAGS.experiment_name + '.checkpoint'
 
     with tf.Session() as sess:
         sess.run(init)
