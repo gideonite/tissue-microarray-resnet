@@ -98,7 +98,6 @@ def dataset(path='.', split=0.8, random_seed=1337):
     ytrain = ydata[:pivot]
     ytest = ydata[pivot:]
 
-    import pdb; pdb.set_trace()
     np.save(path + 'xtrain.npy', xtrain)
     np.save(path + 'xtest.npy', xtest)
     np.save(path + 'ytrain.npy', ytrain)

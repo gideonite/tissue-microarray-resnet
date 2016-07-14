@@ -40,6 +40,10 @@ def maybe_load_logfile(path):
 
     return log
 
+def mkdir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 def main(_):
     xtrain, xtest, ytrain, ytest = cedars_sinai_etl.dataset(path=FLAGS.cache_basepath)
 
@@ -61,7 +65,10 @@ def main(_):
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
-    savepath = FLAGS.cache_basepath + FLAGS.experiment_name + ".checkpoint"
+
+    savepath = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
+        + FLAGS.experiment_name + '.checkpoint'
+
     with tf.Session() as sess:
         sess.run(init)
         try:
@@ -81,6 +88,12 @@ def main(_):
             print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
 
         for epoch_i in xrange(FLAGS.num_epochs):
+            # shuffle training data for each epoch
+            idx = np.array(list(range(len(xtrain))))
+            np.random.shuffle(idx)
+            xtrain = np.array(xtrain)[idx]
+            ytrain = np.array(ytrain)[idx]
+
             train_accs = []
             for batch_i in xrange(0, num_examples, FLAGS.batch_size):
                 xbatch = xtrain[batch_i : batch_i + FLAGS.batch_size]
