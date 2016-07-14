@@ -48,6 +48,18 @@ def mkdir(directory):
 
     return directory
 
+def variable_summaries(var, name):
+  """Attach a lot of summaries to a Tensor."""
+  with tf.name_scope('summaries'):
+    mean = tf.reduce_mean(var)
+    tf.scalar_summary('mean/' + name, mean)
+    with tf.name_scope('stddev'):
+      stddev = tf.sqrt(tf.reduce_sum(tf.square(var - mean)))
+    tf.scalar_summary('sttdev/' + name, stddev)
+    tf.scalar_summary('max/' + name, tf.reduce_max(var))
+    tf.scalar_summary('min/' + name, tf.reduce_min(var))
+    tf.histogram_summary(name, var)
+
 def main(_):
     if FLAGS.num_images != -1:
         xdata, ydata = cedars_sinai_etl.dataset(num_images=FLAGS.num_images)
@@ -71,6 +83,11 @@ def main(_):
     xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
     train_step, preds, loss, accuracy = resnet_pure.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
+
+    with tf.name_scope('summaries'):
+        tf.scalar_summary('loss', loss)
+        tf.scalar_summary('accuracy', accuracy)
+    
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()

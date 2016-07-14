@@ -7,6 +7,7 @@ import itertools
 import numpy as np
 import scipy.io as sio
 import os
+import os.path
 import tensorflow as tf
 
 img_filename = "/mnt/data/TIFF color normalized sequential filenames/test%d.tif"
@@ -50,17 +51,29 @@ def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride)
             ret.append(label_value)
     return ret
 
-def dataset(num_images=225, random_seed=1337):
+def dataset(path='.', split=0.8, num_images=225, random_seed=1337):
     '''
     Returns shuffled training data of paired patches with
     labels. Returns a tuple, (X, y).
     '''
 
+    # if we've done this before, just reuse it.
+    if os.path.exists(path + '/xtrain.npy') and \
+       os.path.exists(path + '/xtest.npy') and \
+       os.path.exists(path + '/ytrain.npy') and \
+       os.path.exists(path + '/ytest.npy'):
+        
+        xtrain = np.load(path + '/xtrain.npy')
+        xtest = np.load(path + '/xtest.npy')
+        ytrain = np.load(path + '/ytrain.npy')
+        ytest = np.load(path + '/ytest.npy')
+        return xtrain, xtest, ytrain, ytest
+
     if random_seed:
         np.random.seed(random_seed)
 
     xdata, ydata = [], []
-    for file_num in range(1, num_images+1):
+    for file_num in range(1, num_images):
         patches = _patches(img_filename %(file_num))
         labels = _patch_labels(label_filename %(file_num))
         assert len(patches) == len(labels)
@@ -71,8 +84,23 @@ def dataset(num_images=225, random_seed=1337):
 
     idx = np.array(list(range(len(xdata))))
     np.random.shuffle(idx)
+    xdata = np.array(xdata)[idx]
+    ydata = np.array(ydata)[idx]
 
-    return np.array(xdata)[idx], np.array(ydata)[idx]
+    assert len(xdata) == len(ydata)
+    num_examples = len(xdata)
 
-print(np.array_equal(dataset(1)[0], dataset(1)[0]))
+    pivot = int(split*num_examples)
+    xtrain = xdata[:pivot, :]
+    xtest = xdata[pivot:, :]
+    ytrain = ydata[:pivot]
+    ytest = ydata[pivot:]
 
+    np.save(path + '/xtrain.npy', xtrain)
+    np.save(path + '/xtest.npy', xtest)
+    np.save(path + '/ytrain.npy', ytrain)
+    np.save(path + '/ytest.npy', ytest)
+
+    return xtrain, xtest, ytrain, ytest
+
+dataset()
