@@ -5,12 +5,9 @@ Handles the ETL for Ciders-Sinai dataset.
 import cv2
 import itertools
 import numpy as np
-import random
 import scipy.io as sio
 import os
 import tensorflow as tf
-
-random.seed(1337) # TODO
 
 img_filename = "/mnt/data/TIFF color normalized sequential filenames/test%d.tif"
 label_filename = "/mnt/data/ATmask sequential filenames/test%d_Mask.mat"
@@ -53,11 +50,17 @@ def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride)
             ret.append(label_value)
     return ret
 
-_file_nums = list(range(1,225))
-random.shuffle(_file_nums)
-def dataset(num_images=len(_file_nums)):
+def dataset(num_images=225, random_seed=1337):
+    '''
+    Returns shuffled training data of paired patches with
+    labels. Returns a tuple, (X, y).
+    '''
+
+    if random_seed:
+        np.random.seed(random_seed)
+
     xdata, ydata = [], []
-    for file_num in _file_nums[:num_images]:
+    for file_num in range(1, num_images+1):
         patches = _patches(img_filename %(file_num))
         labels = _patch_labels(label_filename %(file_num))
         assert len(patches) == len(labels)
@@ -70,3 +73,6 @@ def dataset(num_images=len(_file_nums)):
     np.random.shuffle(idx)
 
     return np.array(xdata)[idx], np.array(ydata)[idx]
+
+print(np.array_equal(dataset(1)[0], dataset(1)[0]))
+
