@@ -92,15 +92,28 @@ def dataset(path='.', split=0.8, random_seed=1337):
     assert len(xdata) == len(ydata)
     num_examples = len(xdata)
 
+    # set aside a "do not touch set"
+    ten_percent = int(0.1*num_examples)
+    xdonottouch = xdata[:ten_percent]
+    ydonottouch = ydata[:ten_percent]
+    np.save(path + '/xdonottouch.npy', xdonottouch)
+    np.save(path + '/ydonottouch.npy', ydonottouch)
+    del xdonottouch, ydonottouch
+
+    # now pretend that we never had the "do not touch set"
+    xdata = xdata[ten_percent:]
+    ydata = ydata[ten_percent:]
+    num_examples = len(xdata)
+
     pivot = int(split*num_examples)
     xtrain = xdata[:pivot, :]
     xtest = xdata[pivot:, :]
     ytrain = ydata[:pivot]
     ytest = ydata[pivot:]
 
-    np.save(path + 'xtrain.npy', xtrain)
-    np.save(path + 'xtest.npy', xtest)
-    np.save(path + 'ytrain.npy', ytrain)
-    np.save(path + 'ytest.npy', ytest)
+    np.save(path + '/xtrain.npy', xtrain)
+    np.save(path + '/xtest.npy', xtest)
+    np.save(path + '/ytrain.npy', ytrain)
+    np.save(path + '/ytest.npy', ytest)
 
     return xtrain, xtest, ytrain, ytest

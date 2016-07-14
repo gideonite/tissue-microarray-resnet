@@ -87,7 +87,7 @@ def main(_):
         except ValueError:
             # test on the randomly intialized model
             test_accs = []
-            for batch_i in xrange(0, xtest.shape[0], FLAGS.batch_size):
+            for batch_i in xrange(0, len(xtest), FLAGS.batch_size):
                 xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
                 test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
@@ -119,7 +119,7 @@ def main(_):
             saver.save(sess, savepath)
 
             test_accs = []
-            for batch_i in xrange(0, xtest.shape[0], FLAGS.batch_size):
+            for batch_i in xrange(0, len(xtest), FLAGS.batch_size):
                 xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
                 test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
