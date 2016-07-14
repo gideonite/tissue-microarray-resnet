@@ -14,6 +14,13 @@ of 32, 64, 128.
 
 AT masks are used. There are 4 pixel-wise classes in this data.
 
+The AT masks correspond to pathologist labelling: 0,1,2,3 corresponds
+to yellow, red, blue, green (see color annotated images) which
+corresponds to stroma, high grade tumor, benign/normal, low grade
+tumor.
+
+[[all-grades.jpg]]
+
 * Model
   
 ResNet model with bottleneck blocks. 
