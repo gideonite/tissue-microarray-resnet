@@ -37,6 +37,23 @@ def plot_row_of_images(sample_num):
 
     plt.show()
 
+def overlay_predictions(img, path_to_checkpoint):
+    patch_size = 64
+    stride = 1
+    ret = []
+    for x in range(int((img.shape[0]-patch_size+1)/stride)):
+        patches = []
+        for y in range(int((img.shape[1]-patch_size+1)/stride)):
+            patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
+            patches.append(patches)
+
+        patches = np.array(patches)
+        preds = resnet.predict(patches, path_to_checkpoint)
+        ret.append(preds)
+
+    return ret
+
 img = cv2.imread(img_filename %(10))
 assert img != None
-patches = cedars_sinai_etl._patches(img_filename %(10))
+
+overlay_predictions(img, '/mnt/data/output/foobar/foobar.checkpoint')
