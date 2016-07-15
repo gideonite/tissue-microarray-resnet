@@ -7,6 +7,7 @@ Reference Paper: http://arxiv.org/pdf/1512.03385.pdf
 from collections import namedtuple
 import tensorflow as tf
 from math import sqrt
+import numpy as np
 
 def get_variable(name, shape):
     return tf.get_variable(name, shape, initializer=tf.contrib.layers.xavier_initializer())
@@ -92,3 +93,28 @@ def train_ops(xplaceholder,
                                                yplaceholder), tf.float32))
 
     return train_op, preds, avg_loss, accuracy
+
+def predict(xs, checkpoint_path):
+    '''
+    array of examples x features, path/to/experiment.checkpoint  -> 1D array of predictions
+    '''
+    num_channels = 3
+    num_classes = 4
+    ndim = int(sqrt(xs.shape[1] / num_channels))
+    xs = xs.reshape(-1, ndim, ndim, 3)
+
+    xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
+    predictor = inference(xplaceholder, num_classes)
+
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        saver.restore(sess, checkpoint_path)
+
+        batch_size = 64
+        ret = []
+        for batch_i in xrange(0, len(xs), batch_size):
+            batch = xs[batch_i : batch_i + batch_size]
+            preds = sess.run(tf.argmax(predictor, 1), feed_dict={xplaceholder: batch})
+            ret.append(preds)
+
+    return np.concatenate(ret)
