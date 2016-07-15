@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 import sys
 import cedars_sinai_etl
 import resnet
+import sklearn.metrics
+
 
 # basedir = "/home/gideon/Data/cedars-sinai/"
 basedir = "/mnt/data/"
@@ -53,7 +55,16 @@ def overlay_predictions(img, path_to_checkpoint):
 
     return ret
 
-img = cv2.imread(img_filename %(10))
-assert img != None
+# img = cv2.imread(img_filename %(10))
+# assert img != None
 
-overlay_predictions(img, '/mnt/data/output/foobar/foobar.checkpoint')
+# overlay_predictions(img, '/mnt/data/output/foobar/foobar.checkpoint')
+
+def confusion_matrix(path_to_checkpoint, xtest_path, ytest_path):
+    xtest = np.load(xtest_path)
+    ytest = np.load(ytest_path)
+
+    preds = resnet.predict(xtest, path_to_checkpoint)
+    return sklearn.metrics.confusion_matrix(ytest, preds)
+
+confmatrix = confusion_matrix('/mnt/data/output/foobar/foobar.checkpoint', '/mnt/data/output/xtest.npy', '/mnt/data/output/ytest.npy') 
