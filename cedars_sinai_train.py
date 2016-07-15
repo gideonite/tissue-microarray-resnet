@@ -7,7 +7,7 @@ import sys
 import os.path
 
 import cedars_sinai_etl
-import resnet_pure
+import resnet
 import numpy as np
 
 flags = tf.app.flags
@@ -30,7 +30,7 @@ def maybe_load_logfile(path):
     else:
         print("creating new experiment from scratch in '" + path + "'")
         log = {'cmd': " ".join(sys.argv), # TODO, want to separate cmd line args from code to automatically restart experiments.
-               'architecture': resnet_pure.groups,
+               'architecture': resnet.groups,
                'train_accs': [],
                'test_accs': [],
                'num_epochs': FLAGS.num_epochs,
@@ -69,7 +69,7 @@ def main(_):
     num_channels = example.shape[2]
     xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
-    train_step, preds, loss, accuracy = resnet_pure.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
+    train_step, preds, loss, accuracy = resnet.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
