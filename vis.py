@@ -5,6 +5,7 @@ import sys
 import cedars_sinai_etl
 import resnet
 import sklearn.metrics
+import json
 
 
 # basedir = "/home/gideon/Data/cedars-sinai/"
