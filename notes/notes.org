@@ -19,7 +19,13 @@ to yellow, red, blue, green (see color annotated images) which
 corresponds to stroma, high grade tumor, benign/normal, low grade
 tumor.
 
-[[all-grades.jpg]]
+| 0 | Y | stroma        |
+| 1 | R | high grade    |
+| 2 | B | benign/normal |
+| 3 | G | low grade     |
+
+#+ATTR_LATEX: :width 1.00\textwidth :placement {l}{-1.0\textwidth}
+[[./all-grades.jpg]]
 
 ** Stats
    
@@ -50,9 +56,9 @@ See ipython notebooks for more.
 
 * Research and Benchmarks
 
-What is the meaning of a 4 class mask as in the AT Mask? What is the
-different between AT masks and the ST GL masks? How does this
-correspond to the Cedars-Sinai paper?
+# What is the meaning of a 4 class mask as in the AT Mask? What is the
+# different between AT masks and the ST GL masks? How does this
+# correspond to the Cedars-Sinai paper?
 
 Should I use Jaccard index as well even though it seems wrong and
 somewhat convoluted?
