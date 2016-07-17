@@ -67,4 +67,25 @@ def confusion_matrix(path_to_checkpoint, xtest_path, ytest_path):
     preds = resnet.predict(xtest, path_to_checkpoint)
     return sklearn.metrics.confusion_matrix(ytest, preds)
 
-confmatrix = confusion_matrix('/mnt/data/output/foobar/foobar.checkpoint', '/mnt/data/output/xtest.npy', '/mnt/data/output/ytest.npy') 
+# confmatrix = confusion_matrix('/mnt/data/output/foobar/foobar.checkpoint', '/mnt/data/output/xtest.npy', '/mnt/data/output/ytest.npy') 
+    
+def plot_train_accs(filename):
+    with open(filename) as f:
+        data = json.load(f)
+        plt.xlim(0,len(data['train_accs'][0]))
+        for i, train_acc in enumerate(data['train_accs']):
+            thecolor = 1 - ( (i+10) / (len(data['train_accs'])+10))
+            plt.plot(train_acc, '-', color=(thecolor, thecolor, thecolor))
+
+        plt.title(data['experiment_name'])
+        plt.ylabel('train accuracies')
+        plt.xlabel('batch')
+
+def plot_test_accs(filename):
+    with open(filename) as f:
+        data = json.load(f)
+        plt.ylim(0,1.1)
+        plt.plot(data['test_accs'], '-')       
+        plt.title(data['experiment_name'])
+        plt.ylabel('test accuracy')
+        plt.xlabel('epoch')
