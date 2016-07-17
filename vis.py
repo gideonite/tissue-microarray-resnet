@@ -69,8 +69,14 @@ def confusion_matrix(path_to_checkpoint, xtest_path, ytest_path):
     return sklearn.metrics.confusion_matrix(ytest, preds)
 
 # confmatrix = confusion_matrix('/mnt/data/output/foobar/foobar.checkpoint', '/mnt/data/output/xtest.npy', '/mnt/data/output/ytest.npy') 
+
+def save_or_show(plt, filename):
+    if filename != None:
+        plt.savefig(filename)
+    else:
+        plt.show()
     
-def plot_train_accs(filename):
+def plot_train_accs(filename, output_filename=None):
     with open(filename) as f:
         data = json.load(f)
         plt.xlim(0, sum([len(accs) for accs in data['train_accs']]))
@@ -85,9 +91,10 @@ def plot_train_accs(filename):
         plt.title(data['experiment_name'])
         plt.ylabel('train accuracies')
         plt.xlabel('batch')
-        plt.show()
 
-def plot_test_accs(filename):
+        save_or_show(plt, output_filename)
+
+def plot_test_accs(filename, output_filename=None):
     with open(filename) as f:
         data = json.load(f)
         plt.ylim(0,1.1)
@@ -95,3 +102,6 @@ def plot_test_accs(filename):
         plt.title(data['experiment_name'])
         plt.ylabel('test accuracy')
         plt.xlabel('epoch')
+        plt.show()
+
+        save_or_show(plt, output_filename)
