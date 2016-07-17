@@ -27,6 +27,15 @@ tumor.
 #+ATTR_LATEX: :width 1.00\textwidth :placement {l}{-1.0\textwidth}
 [[./all-grades.jpg]]
 
+** Stats
+   
+After separating out hard hold out set, here are some stats:
+
+patch size = 64
+only looking at train set (not validation set)
+number of patches of each class:
+[26286, 51601, 27940, 91741]
+
 * Model
   
 ResNet model with bottleneck blocks. 
