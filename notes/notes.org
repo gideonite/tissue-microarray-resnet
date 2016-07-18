@@ -19,10 +19,10 @@ to yellow, red, blue, green (see color annotated images) which
 corresponds to stroma, high grade tumor, benign/normal, low grade
 tumor.
 
-| 0 | Y | stroma        |
-| 1 | R | high grade    |
-| 2 | B | benign/normal |
-| 3 | G | low grade     |
+| 1 | Y | stroma        |
+| 2 | R | high grade    |
+| 3 | B | benign/normal |
+| 4 | G | low grade     |
 
 #+ATTR_LATEX: :width 1.00\textwidth :placement {l}{-1.0\textwidth}
 [[./all-grades.jpg]]
@@ -51,8 +51,17 @@ residual connection.
 In total there are $4 \times 3 \times 3 = 36$ layers.
 
 * Results
-  
-See ipython notebooks for more.
+
+#+CAPTION: confusion matrix for patch size 64, model trained on all the training data. Calculated from test data. Rows are the true class and columns are the predicted class. Wall time: ~16min.
+| 4132 |  1002 |  444 |   868 |
+|  862 | 10016 |  254 |  1597 |
+|  170 |   132 | 6136 |   626 |
+|  817 |  1225 |  596 | 20515 |
+
+test1  - labels 1, 4
+test4  - labels 1, 2, 3, 4
+test33 - labels 3, 4
+
 
 * Research and Benchmarks
 
