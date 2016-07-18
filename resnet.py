@@ -42,7 +42,11 @@ groups = [BottleneckGroup(3, 128, 32),
 ]
 
 def inference(xplaceholder, num_classes):
-  # First convolution expands to 64 channels
+    '''
+    Builds the model.
+    '''
+
+    # First convolution expands to 64 channels
     with tf.variable_scope('first_conv_expand_layer'):
         net = conv2d(xplaceholder, [7, 7], 64, [1, 1, 1, 1])
     net = tf.nn.max_pool(
@@ -51,16 +55,16 @@ def inference(xplaceholder, num_classes):
     for group_i, group in enumerate(groups):
         for block_i in range(group.num_blocks):
             name = 'group_%d/block_%d' % (group_i, block_i)
-            
+
             with tf.variable_scope(name + '/conv_in'):
                 conv = conv2d(net, [1, 1], group.bottleneck_size, [1, 1, 1, 1])
                 
             with tf.variable_scope(name + '/conv_bottleneck'):
-                conv = conv2d(net, [3, 3], group.bottleneck_size, [1, 1, 1, 1])
+                conv = conv2d(conv, [3, 3], group.bottleneck_size, [1, 1, 1, 1])
 
             with tf.variable_scope(name + '/conv_out'):
                 outdim = net.get_shape()[-1].value
-                conv = conv2d(net, [3, 3], outdim, [1, 1, 1, 1])
+                conv = conv2d(conv, [3, 3], outdim, [1, 1, 1, 1])
 
             net = conv + net
         try:
@@ -78,10 +82,13 @@ def inference(xplaceholder, num_classes):
     return net
 
 def train_ops(xplaceholder,
-          yplaceholder,
-          num_classes,
-          optimizer=tf.train.GradientDescentOptimizer,
-          learning_rate=0.01):
+              yplaceholder,
+              num_classes,
+              optimizer=tf.train.GradientDescentOptimizer,
+              learning_rate=0.01):
+    '''
+    Returns the TF ops that you can use during training.
+    '''
 
     preds = inference(xplaceholder, num_classes)
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder,
