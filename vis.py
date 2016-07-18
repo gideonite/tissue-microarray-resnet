@@ -7,7 +7,6 @@ import resnet
 import sklearn.metrics
 import json
 
-
 # basedir = "/home/gideon/Data/cedars-sinai/"
 basedir = "/mnt/data/"
 img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
@@ -70,7 +69,7 @@ def confusion_matrix(path_to_checkpoint, xtest_path, ytest_path):
 
 # confmatrix = confusion_matrix('/mnt/data/output/foobar/foobar.checkpoint', '/mnt/data/output/xtest.npy', '/mnt/data/output/ytest.npy') 
 
-def save_or_show(plt, filename):
+def _save_or_show(plt, filename):
     if filename != None:
         plt.savefig(filename)
     else:
@@ -92,7 +91,7 @@ def plot_train_accs(filename, output_filename=None):
         plt.ylabel('train accuracies')
         plt.xlabel('batch')
 
-        save_or_show(plt, output_filename)
+        _save_or_show(plt, output_filename)
 
 def plot_test_accs(filename, output_filename=None):
     with open(filename) as f:
@@ -104,4 +103,4 @@ def plot_test_accs(filename, output_filename=None):
         plt.xlabel('epoch')
         plt.show()
 
-        save_or_show(plt, output_filename)
+        _save_or_show(plt, output_filename)
