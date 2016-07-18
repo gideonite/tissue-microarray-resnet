@@ -30,9 +30,11 @@ ENV TENSORFLOW_VERSION 0.8.0
 #0.9.0rc0
 RUN pip install --upgrade https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-${TENSORFLOW_VERSION}-cp27-none-linux_x86_64.whl
 
-# TODO: I am not familiar with TensorBoard, disabled for the time being but kept around in case someone else wants to use it. If that's you, please update this wiki.
 # TensorBoard
-# EXPOSE 6006
+EXPOSE 6006
+
+# Jupyter notebook
+EXPOSE 8888
 
 RUN pip --no-cache-dir install scikit-learn \
     h5py \
