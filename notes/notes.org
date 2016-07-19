@@ -36,19 +36,39 @@ only looking at train set (not validation set)
 number of patches of each class:
 [26286, 51601, 27940, 91741]
 
+So the classes are very unbalanced. As of now, no class balancing is
+done.
+
 * Model
   
-ResNet model with bottleneck blocks. 
+ResNet model with bottleneck blocks. All convolutions (and max pooling) use /same padding/. Assume an input patch of size 64 x 64 x 3.
 
-There are 4 bottleneck groups, each one hsa 3 bottleneck blocks, each
-block has 3 layers --- an expansion layer which does 1x1 convolution
-with a filter size of 128, 256, 512, and 1024 for each group, a
-bottleneck layer which does 3x3 convolution with the same number of
-filters and a 3x3 convolution with the number of filters set to the
-input of the bottleneck block so that dimensions match for the
-residual connection.
+(7 x 7) x 64 channel convolution. Output is (64 x 64) x 64.
 
-In total there are $4 \times 3 \times 3 = 36$ layers.
+(3 x 3) max pool with stride (2 x 2). Output is (32 x 32) x 64.
+
+The first group has 3 blocks, 128 filters (for each block) and 32
+bottleneck size (for each block).
+
+(1 x 1) x 32 convolution. Output is (32 x 32) x 32.
+
+(3 x 3) x 32 convolution. Output is (32 x 32) x 32.
+
+(1 x 1) x 64 (num of input channels to the block). Output is (32 x 32) x 64.
+
+Skip connection: add the input from step () to the output of the previous step.
+
+
+
+# There are 4 bottleneck groups, each one has 3 bottleneck blocks, each
+# block has 3 layers --- an expansion layer which does 1x1 convolution
+# with a filter size of 128, 256, 512, and 1024 for each group, a
+# bottleneck layer which does 3x3 convolution with the same number of
+# filters and a 3x3 convolution with the number of filters set to the
+# input of the bottleneck block so that dimensions match for the
+# residual connection.
+
+# In total there are $4 \times 3 \times 3 = 36$ layers.
 
 * Results
 
