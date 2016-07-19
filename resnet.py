@@ -32,7 +32,6 @@ def flatten(x):
         volumn *= dim.value
     return tf.reshape(x, [-1, volumn])
 
-# Configurations for each bottleneck group.
 BottleneckGroup = namedtuple(
     'BottleneckGroup', ['num_blocks', 'num_filters', 'bottleneck_size'])
 groups = [BottleneckGroup(3, 128, 32),
@@ -52,7 +51,6 @@ def inference(xplaceholder, num_classes):
     net = tf.nn.max_pool(
         net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-    # Scale the number of channels for the first group.
     with tf.variable_scope("group_0/block_0/conv_upscale"):
         net = conv2d(net, [1, 1], groups[0].num_filters, [1,1,1,1])
 
