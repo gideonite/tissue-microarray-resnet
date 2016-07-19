@@ -125,7 +125,8 @@ def main(_):
                 # stringify for JSON serialization
                 train_accs.append(str(train_acc))
 
-                print("epoch: %d batch: %d training_accuracy=%f" %(epoch_i+1, batch_i/FLAGS.batch_size, train_acc))
+                print("epoch: %d/%d batch: %d training_accuracy=%f" \
+                      %(epoch_i+1, FLAGS.num_epochs, batch_i/FLAGS.batch_size, train_acc))
 
             # save the model immediately
             saver.save(sess, savepath)
