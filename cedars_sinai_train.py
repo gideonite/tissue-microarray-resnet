@@ -86,7 +86,7 @@ def main(_):
     savepath = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
         + '/' + FLAGS.experiment_name + '.checkpoint'
 
-    with tf.Session() as sess:
+    with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         sess.run(init)
         try:
             if not FLAGS.clobber:
