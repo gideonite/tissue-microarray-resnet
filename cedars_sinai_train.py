@@ -1,10 +1,11 @@
+import json
 from sklearn.cross_validation import train_test_split
 import tensorflow as tf
-import json
 from math import sqrt
+import os.path
+import pickle
 import time
 import sys
-import os.path
 
 import cedars_sinai_etl
 import resnet
@@ -18,7 +19,7 @@ timestamp = str(time.time())
 flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
-flags.DEFINE_float('frac_of_data', 1.0, 'Fraction of training data to use')
+flags.DEFINE_float('frac_data', 1.0, 'Fraction of training data to use')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
 flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
@@ -31,10 +32,11 @@ def maybe_load_logfile(path):
     else:
         print("creating new experiment from scratch in '" + path + "'")
         log = {'cmd': " ".join(sys.argv), # TODO, want to separate cmd line args from code to automatically restart experiments.
-               'architecture': resnet.groups,
+               'architecture': [g._asdict() for g in resnet.groups],
                'train_accs': [],
                'test_accs': [],
                'num_epochs': FLAGS.num_epochs,
+               'num_epochs_completed': 0,
                'timestamp': timestamp,
                'experiment_name': FLAGS.experiment_name,
                'batch_size': FLAGS.batch_size,
@@ -49,10 +51,14 @@ def mkdir(path):
          
     return path
 
+printable_params = set(['architecture', 'num_epochs', 'num_epochs_completed',\
+                        'timestamp', 'experiment_name', 'batch_size',\
+                        'patch_size', 'stride'])
+
 def main(_):
     xtrain, xtest, ytrain, ytest = cedars_sinai_etl.dataset(path=FLAGS.cache_basepath)
-    xtrain = xtrain[:int(len(xtrain)*FLAGS.frac_of_data),:]
-    ytrain = ytrain[:int(len(ytrain)*FLAGS.frac_of_data)]
+    xtrain = xtrain[:int(len(xtrain)*FLAGS.frac_data),:]
+    ytrain = ytrain[:int(len(ytrain)*FLAGS.frac_data)]
 
     ndim = int(sqrt(xtrain.shape[1] / 3))
     xtrain = xtrain.reshape(-1, ndim, ndim, 3)
@@ -62,7 +68,9 @@ def main(_):
     log = maybe_load_logfile(resultspath)
     log['num_training_examples'] = len(xtrain)
     log['num_test_examples'] = len(xtest)
-    json.dump(log, sys.stdout, indent=2)
+
+    json.dump(dict((k,v) for k,v in log.iteritems() if k in printable_params),\
+              sys.stdout, indent=2)
 
     example = xtrain[0]
     assert example.shape[0] == example.shape[1]
@@ -119,6 +127,7 @@ def main(_):
 
                 print("epoch: %d batch: %d training_accuracy=%f" %(epoch_i+1, batch_i/FLAGS.batch_size, train_acc))
 
+            # save the model immediately
             saver.save(sess, savepath)
 
             # testing
@@ -134,15 +143,19 @@ def main(_):
                 test_accs.append(acc)
                 predictions.append(preds)
 
-            log['test_predictions'] = list(np.concatenate(predictions))
-
+            log['test_predictions'] = pickle.dumps(np.concatenate(predictions))
             log['train_accs'].append(train_accs)
             test_acc = sum(test_accs) / len(test_accs)
             log['test_accs'].append(str(test_acc))
+            log['num_epochs_completed'] += 1
             print("%s\t epoch: %d test_accuracy=%f" %(FLAGS.experiment_name, epoch_i+1, test_acc))
 
             with open(resultspath, 'w+') as logfile:
-                json.dump(log, logfile, indent=4)
+                try:
+                    json.dump(log, logfile, indent=4)
+                except TypeError, e:
+                    print(log)
+                    raise TypeError, e
 
 if __name__ == '__main__':
     tf.app.run()
