@@ -22,6 +22,7 @@ flags.DEFINE_float('frac_of_data', 1.0, 'Fraction of training data to use')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
 flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
+flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluation).')
 
 def maybe_load_logfile(path):
     if os.path.exists(path) and not FLAGS.clobber:
@@ -69,7 +70,7 @@ def main(_):
     num_channels = example.shape[2]
     xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
-    train_step, preds, loss, accuracy = resnet.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
+    train_step, predictor, loss, accuracy = resnet.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
@@ -85,15 +86,16 @@ def main(_):
             else:
                 raise ValueError # TODO hack
         except ValueError:
-            # test on the randomly intialized model
-            test_accs = []
-            for batch_i in xrange(0, len(xtest), FLAGS.batch_size):
-                xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
-                ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
-                test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
-            test_acc = sum(test_accs) / len(test_accs)
-            log['test_accs'].append(str(test_acc))
-            print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
+            if not FLAGS.debug:
+                # test on the randomly intialized model, but skip this in debug mode and get straight to training.
+                test_accs = []
+                for batch_i in xrange(0, len(xtest), FLAGS.batch_size):
+                    xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
+                    ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
+                    test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
+                test_acc = sum(test_accs) / len(test_accs)
+                log['test_accs'].append(str(test_acc))
+                print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
 
         for epoch_i in xrange(FLAGS.num_epochs):
             # shuffle training data for each epoch
@@ -102,6 +104,7 @@ def main(_):
             xtrain = np.array(xtrain)[idx]
             ytrain = np.array(ytrain)[idx]
 
+            # training
             train_accs = []
             for batch_i in xrange(0, num_examples, FLAGS.batch_size):
                 xbatch = xtrain[batch_i : batch_i + FLAGS.batch_size]
@@ -118,11 +121,20 @@ def main(_):
 
             saver.save(sess, savepath)
 
+            # testing
             test_accs = []
+            predictions = []
             for batch_i in xrange(0, len(xtest), FLAGS.batch_size):
                 xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
                 ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
-                test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
+
+                acc, preds = sess.run([accuracy, predictor], \
+                                      feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+                
+                test_accs.append(acc)
+                predictions.append(preds)
+
+            log['test_predictions'] = list(np.concatenate(predictions))
 
             log['train_accs'].append(train_accs)
             test_acc = sum(test_accs) / len(test_accs)
