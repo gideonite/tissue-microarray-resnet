@@ -73,7 +73,7 @@ def inference(xplaceholder, num_classes):
 
         try:
             next_group = groups[group_i+1]
-            with tf.variable_scope('block_%d/conv_upscale' % group_i):
+            with tf.variable_scope('group_%d/conv_upscale' % group_i):
                 net = conv2d(net, [1, 1], next_group.num_filters, [1, 1, 1, 1])
         except IndexError:
             pass
