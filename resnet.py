@@ -52,6 +52,10 @@ def inference(xplaceholder, num_classes):
     net = tf.nn.max_pool(
         net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
+    # Scale the number of channels for the first group.
+    with tf.variable_scope("group_0/block_0/conv_upscale"):
+        net = conv2d(net, [1, 1], groups[0].num_filters, [1,1,1,1])
+
     for group_i, group in enumerate(groups):
         for block_i in range(group.num_blocks):
             name = 'group_%d/block_%d' % (group_i, block_i)
@@ -63,10 +67,10 @@ def inference(xplaceholder, num_classes):
                 conv = conv2d(conv, [3, 3], group.bottleneck_size, [1, 1, 1, 1])
 
             with tf.variable_scope(name + '/conv_out'):
-                outdim = net.get_shape()[-1].value
-                conv = conv2d(conv, [3, 3], outdim, [1, 1, 1, 1])
+                conv = conv2d(conv, [1, 1], group.num_filters, [1, 1, 1, 1])
 
             net = conv + net
+
         try:
             next_group = groups[group_i+1]
             with tf.variable_scope('block_%d/conv_upscale' % group_i):
