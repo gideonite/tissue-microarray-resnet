@@ -32,15 +32,7 @@ def flatten(x):
         volumn *= dim.value
     return tf.reshape(x, [-1, volumn])
 
-BottleneckGroup = namedtuple(
-    'BottleneckGroup', ['num_blocks', 'num_filters', 'bottleneck_size'])
-groups = [BottleneckGroup(3, 128, 32),
-          BottleneckGroup(3, 256, 64),
-          BottleneckGroup(3, 512, 128),
-          BottleneckGroup(3, 1024, 256)
-]
-
-def inference(xplaceholder, num_classes):
+def inference(xplaceholder, groups, num_classes):
     '''
     Builds the model.
     '''
@@ -83,8 +75,27 @@ def inference(xplaceholder, num_classes):
     net = fully_connected(net, num_classes)
     return net
 
+BottleneckGroup = namedtuple(
+    'BottleneckGroup', ['num_blocks', 'num_filters', 'bottleneck_size'])
+
+_architectures = {'41_layers': [BottleneckGroup(3, 128, 32),
+                                BottleneckGroup(3, 256, 64),
+                                BottleneckGroup(3, 512, 128),
+                                BottleneckGroup(3, 1024, 256)],
+                  '50_layers': [BottleneckGroup(3, 64, 256),
+                                BottleneckGroup(4, 128, 512),
+                                BottleneckGroup(6, 256, 1024),
+                                BottleneckGroup(3, 512, 2048)]}
+
+def get_architecture_or_fail(arch):
+    try:
+        return _architectures[arch]
+    except KeyError:
+        raise KeyError, "available architecures are: " + ",".join(architectures)
+
 def train_ops(xplaceholder,
               yplaceholder,
+              architecture,
               num_classes,
               optimizer=tf.train.GradientDescentOptimizer,
               learning_rate=0.01):
@@ -92,7 +103,9 @@ def train_ops(xplaceholder,
     Returns the TF ops that you can use during training.
     '''
 
-    preds = inference(xplaceholder, num_classes)
+    arch = get_architecture_or_fail(architecture)
+
+    preds = inference(xplaceholder, arch, num_classes)
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder,
                                                                    name='crossentropy')
     avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')

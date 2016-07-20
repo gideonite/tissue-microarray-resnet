@@ -19,6 +19,7 @@ timestamp = str(time.time())
 flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
+flags.DEFINE_string('architecture', '41_layers', '')
 flags.DEFINE_float('frac_data', 1.0, 'Fraction of training data to use')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
@@ -32,7 +33,7 @@ def maybe_load_logfile(path):
     else:
         print("creating new experiment from scratch in '" + path + "'")
         log = {'cmd': " ".join(sys.argv), # TODO, want to separate cmd line args from code to automatically restart experiments.
-               'architecture': [g._asdict() for g in resnet.groups],
+               'architecture': [g._asdict() for g in resnet._architectures[FLAGS.architecture]],
                'train_accs': [],
                'test_accs': [],
                'num_epochs': FLAGS.num_epochs,
@@ -78,7 +79,10 @@ def main(_):
     num_channels = example.shape[2]
     xplaceholder = tf.placeholder(tf.float32, shape=(None, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(None))
-    train_step, predictor, loss, accuracy = resnet.train_ops(xplaceholder, yplaceholder, optimizer=tf.train.AdamOptimizer, num_classes=4)
+    train_step, predictor, loss, accuracy = resnet.train_ops(xplaceholder,
+                                                             yplaceholder,
+                                                             FLAGS.architecture,
+                                                             optimizer=tf.train.AdamOptimizer, num_classes=4)
     num_examples = xtrain.shape[0]
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
