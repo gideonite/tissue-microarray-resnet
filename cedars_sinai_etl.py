@@ -156,8 +156,9 @@ def dataset(path='.', split=0.8, random_seed=1337):
 def tests():
     xdata, ydata = _load_data()
 
-    d = xdata[0]
-    _patches(d, 64, 32)
+    x = xdata[0]
+    y = ydata[0]
+    assert len(_patches(x, 64, 32)) == len(_patches(y, 64, 32))
 
     m = np.eye(3)
     assert np.array_equal(np.array(_patches(m, 2, 1)),
