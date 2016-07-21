@@ -98,9 +98,9 @@ def _shuffle_xy_pairs(xdata, ydata):
     return xdata, ydata
 
 def _maybe_create_dataset(path, patch_size, stride, split=0.8):
-    train_filename = path + "/%strain_patchsize" + str(patch_size) + '.npy'
-    val_filename = path + "/%sval_patchsize" + str(patch_size) + '.npy'
-    test_filename = path + "/%stest_patchsize" + str(patch_size) + '.npy'
+    train_filename = path + "/%strain_patchsize" + str(patch_size) + '_stride' + str(stride) + '.npy'
+    val_filename = path + "/%sval_patchsize" + str(patch_size) + '_stride' + str(stride) + '.npy'
+    test_filename = path + "/%stest_patchsize" + str(patch_size) + '_stride' + str(stride) + '.npy'
 
     filenames = [train_filename, val_filename, test_filename]
 
@@ -132,16 +132,19 @@ def _maybe_create_dataset(path, patch_size, stride, split=0.8):
 
         xpatches, ypatches = _shuffle_xy_pairs(xpatches, ypatches)
 
-        num_examples = len(xdata)
-        ten_percent = int(0.1*num_examples)
-        ninety_percent = int(0.9*num_examples)
+        ten_percent = int(0.1*len(xpatches))
         xtest = xpatches[:ten_percent]
-        xtrain = xpatches[ten_percent:int(0.8*ninety_percent)]
-        xval = xpatches[int(0.8*ninety_percent):]
+        xpatches = xpatches[ten_percent:] # delete the test set
+
+        pivot = int(split*len(xpatches))
+        xtrain = xpatches[:pivot]
+        xval = xpatches[pivot:]
 
         ytest = ypatches[:ten_percent]
-        ytrain = ypatches[ten_percent:int(0.8*ninety_percent)]
-        yval = ypatches[int(0.8*ninety_percent):]
+        ypatches = ypatches[ten_percent:] # delete the test set
+
+        ytrain = ypatches[:pivot]
+        yval = ypatches[pivot:]
 
         np.save(train_filename % 'x', xtrain)
         np.save(val_filename % 'x', xval)
@@ -158,8 +161,8 @@ def _maybe_create_dataset(path, patch_size, stride, split=0.8):
             np.load(train_filename % 'y'), \
             np.load(val_filename % 'y')
 
-def dataset(path, patch_size, batch_size):
-    xtrain, xval, ytrain, yval = _maybe_create_dataset(path, patch_size)
+def dataset(path, patch_size, stride, batch_size):
+    xtrain, xval, ytrain, yval = _maybe_create_dataset(path, patch_size, stride)
 
     def train_iter():
         while True:
@@ -167,74 +170,6 @@ def dataset(path, patch_size, batch_size):
             yield xtrain[idx], ytrain[idx]
 
     return train_iter, xval, yval
-
-
-def dataset(path='.', split=0.8, random_seed=1337):
-    '''
-    Returns shuffled training data of paired patches with
-    labels. Returns a tuple, (X, y).
-    '''
-
-    # if we've done this before, just reuse it.
-    if os.path.exists(path + '/xtrain.npy') and \
-       os.path.exists(path + '/xtest.npy') and \
-       os.path.exists(path + '/ytrain.npy') and \
-       os.path.exists(path + '/ytest.npy'):
-        
-        xtrain = np.load(path + '/xtrain.npy')
-        xtest = np.load(path + '/xtest.npy')
-        ytrain = np.load(path + '/ytrain.npy')
-        ytest = np.load(path + '/ytest.npy')
-        return xtrain, xtest, ytrain, ytest
-
-    print('creating new data for training and testing')
-    if random_seed:
-        np.random.seed(random_seed)
-
-    xdata, ydata = [], []
-    num_images=224
-    for file_num in range(1, num_images+1):
-        patches = _patches(img_filename %(file_num))
-        labels = _patch_labels(label_filename %(file_num))
-        assert len(patches) == len(labels)
-
-        for i in xrange(len(patches)):
-            xdata.append(patches[i])
-            ydata.append(labels[i])
-
-    idx = np.array(list(range(len(xdata))))
-    np.random.shuffle(idx)
-    xdata = np.array(xdata)[idx]
-    ydata = np.array(ydata)[idx]
-
-    assert len(xdata) == len(ydata)
-    num_examples = len(xdata)
-
-    # set aside a "do not touch set"
-    ten_percent = int(0.1*num_examples)
-    xdonottouch = xdata[:ten_percent]
-    ydonottouch = ydata[:ten_percent]
-    np.save(path + '/xdonottouch.npy', xdonottouch)
-    np.save(path + '/ydonottouch.npy', ydonottouch)
-    del xdonottouch, ydonottouch
-
-    # now pretend that we never had the "do not touch set"
-    xdata = xdata[ten_percent:]
-    ydata = ydata[ten_percent:]
-    num_examples = len(xdata)
-
-    pivot = int(split*num_examples)
-    xtrain = xdata[:pivot, :]
-    xtest = xdata[pivot:, :]
-    ytrain = ydata[:pivot]
-    ytest = ydata[pivot:]
-
-    np.save(path + '/xtrain.npy', xtrain)
-    np.save(path + '/xtest.npy', xtest)
-    np.save(path + '/ytrain.npy', ytrain)
-    np.save(path + '/ytest.npy', ytest)
-
-    return xtrain, xtest, ytrain, ytest
 
 def tests():
     xdata, ydata = _load_data()
