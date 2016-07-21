@@ -88,9 +88,14 @@ def _load_data():
     return xdata, ydata
 
 def _shuffle_xy_pairs(xdata, ydata):
-    pairs = zip(xdata, ydata)
-    random.shuffle(pairs)
-    return zip(*pairs)
+    num_examples = len(xdata)
+    assert num_examples == len(ydata)
+    
+    idx = np.array(list(range(num_examples)))
+    np.random.shuffle(idx)
+    xdata = np.array(xdata)[idx]
+    ydata = np.array(ydata)[idx]
+    return xdata, ydata
 
 def foobar(path, patch_size, stride, split=0.8):
     train_filename = path + "/%strain_patchsize" + str(patch_size)
@@ -103,25 +108,54 @@ def foobar(path, patch_size, stride, split=0.8):
     for f in filenames:
         for x in ['x','y']:
             existing_files.append(os.path.exists(f % x))
-
     existing_files = set(existing_files)
-
     assert(len(existing_files)) == 1, "Somehow not all slices of dataset were saved"
 
     is_create_new_trainingset = not existing_files.pop()
     if is_create_new_trainingset:
+        print('creating new data for training and testing')
+
         xdata, ydata = _load_data()
 
-        xpatches = [_patches(x, patch_size, stride) for x in xdata]
-        ypatches = [_patches(y, patch_size, stride) for y in ydata]
+        xpatches = []
+        for img in [_patches(x, patch_size, stride) for x in xdata]:
+            for patch in img:
+                xpatches.append(patch)
 
-        import pdb; pdb.set_trace()
+        ypatches = []
+        for img in [_patches(y, patch_size, stride) for y in ydata]:
+            for patch in img:
+                ypatches.append(patch)
+
+        xpatches = np.array(xpatches)
+        ypatches = np.array(ypatches)
 
         xpatches, ypatches = _shuffle_xy_pairs(xpatches, ypatches)
 
+        ten_percent = int(0.1*num_examples)
+        ninety_percent = int(0.9*num_examples)
+        xtest = xpatches[:ten_percent]
+        xtrain = xpatches[ten_percent:0.8*ninety_percent]
+        xval = xpatches[0.8*ninety_percent:]
+
+        ytest = ypatches[:ten_percent]
+        ytrain = ypatches[ten_percent:0.8*ninety_percent]
+        yval = ypatches[0.8*ninety_percent:]
+
+        np.save(train_filename % 'x', xtrain)
+        np.save(val_filename % 'x', xval)
+        np.save(test_filename % 'x', xtest)
+
+        np.save(train_filename % 'y', ytrain)
+        np.save(val_filename % 'y', yval)
+        np.save(test_filename % 'y', ytest)
+
+        return xtrain, xval, ytrain, yval
     else:
-        # load and return
-        pass
+        return np.load(train_filename % 'x'), \
+            np.load(val_filename % 'x'), \
+            np.load(train_filename % 'y'), \
+            np.load(val_filename % 'y')
 
 
 def dataset(path='.', split=0.8, random_seed=1337):
