@@ -161,15 +161,19 @@ def _maybe_create_dataset(path, patch_size, stride, split=0.8):
             np.load(train_filename % 'y'), \
             np.load(val_filename % 'y')
 
-def dataset(path, patch_size, stride, batch_size):
+def dataset(path, patch_size, stride, frac_data, batch_size):
     xtrain, xval, ytrain, yval = _maybe_create_dataset(path, patch_size, stride)
+
+    frac = np.random.choice(len(xtrain), int(frac_data * len(xtrain)))
+    xtrain = xtrain[frac]
+    ytrain = ytrain[frac]
 
     def train_iter():
         while True:
             idx = np.random.choice(len(xtrain), batch_size)
             yield xtrain[idx], ytrain[idx]
 
-    return train_iter, xval, yval
+    return len(xtrain), train_iter, xval, yval
 
 def tests():
     xdata, ydata = _load_data()
