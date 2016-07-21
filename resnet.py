@@ -9,17 +9,27 @@ import tensorflow as tf
 from math import sqrt
 import numpy as np
 
-def get_variable(name, shape):
-    return tf.get_variable(name, shape, initializer=tf.contrib.layers.xavier_initializer())
+def get_variable(name, shape, weight_decay=None):
+    '''
+    The weight decay parameter gives the scaling constant for the
+    L2-loss on the parameters.
+    '''
+    var = tf.get_variable(name, shape, initializer=tf.contrib.layers.xavier_initializer())
+
+    if weight_decay is not None:
+        wd = tf.mul(tf.nn.l2_loss(var), weight_decay, name='weight_loss')
+        tf.add_to_collection('regularized_losses', wd)
+
+    return var
 
 def fully_connected(x, outdim, activation=tf.nn.relu):
     indim = x.get_shape()[-1].value
-    weights = get_variable('weights', [indim, outdim])
+    weights = get_variable('weights', [indim, outdim], weight_decay=0.0001)
     biases = tf.get_variable('biases', [outdim], initializer=tf.constant_initializer(0.0))
     return tf.matmul(x, weights) + biases
 
 def conv2d(x, filter_shape, num_channels, stride):
-    weights = get_variable('weights', filter_shape + [x.get_shape()[-1].value, num_channels])
+    weights = get_variable('weights', filter_shape + [x.get_shape()[-1].value, num_channels], weight_decay=0.0001)
     conv = tf.nn.conv2d(x, weights, stride, padding='SAME')
     mean, variance = tf.nn.moments(conv, axes=[0,1,2])
     batch_norm = tf.nn.batch_normalization(conv, mean, variance,
@@ -107,9 +117,16 @@ def train_ops(xplaceholder,
     arch = get_architecture_or_fail(architecture)
 
     preds = inference(xplaceholder, arch, num_classes)
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder,
-                                                                   name='crossentropy')
-    avg_loss = tf.reduce_mean(cross_entropy, name='batchwise_avg_loss')
+
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
+    avg_cross_entropy = tf.reduce_mean(cross_entropy)
+    regularization = tf.get_collection('regularized_losses')
+    if regularization:
+        regularization = tf.add_n(regularization)
+        avg_loss = tf.add(avg_cross_entropy, regularization)
+    else:
+        avg_loss = avg_cross_entropy
+
     global_step = tf.Variable(0, name='global_step', trainable=False)
     train_op = optimizer(learning_rate).minimize(avg_loss, global_step=global_step)
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1),
