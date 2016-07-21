@@ -97,10 +97,10 @@ def _shuffle_xy_pairs(xdata, ydata):
     ydata = np.array(ydata)[idx]
     return xdata, ydata
 
-def foobar(path, patch_size, stride, split=0.8):
-    train_filename = path + "/%strain_patchsize" + str(patch_size)
-    val_filename = path + "/%sval_patchsize" + str(patch_size)
-    test_filename = path + "/%stest_patchsize" + str(patch_size)
+def _maybe_create_dataset(path, patch_size, stride, split=0.8):
+    train_filename = path + "/%strain_patchsize" + str(patch_size) + '.npy'
+    val_filename = path + "/%sval_patchsize" + str(patch_size) + '.npy'
+    test_filename = path + "/%stest_patchsize" + str(patch_size) + '.npy'
 
     filenames = [train_filename, val_filename, test_filename]
 
@@ -111,8 +111,8 @@ def foobar(path, patch_size, stride, split=0.8):
     existing_files = set(existing_files)
     assert(len(existing_files)) == 1, "Somehow not all slices of dataset were saved"
 
-    is_create_new_trainingset = not existing_files.pop()
-    if is_create_new_trainingset:
+    dataset_exists = not list(existing_files)[0]
+    if dataset_exists:
         print('creating new data for training and testing')
 
         xdata, ydata = _load_data()
@@ -132,15 +132,16 @@ def foobar(path, patch_size, stride, split=0.8):
 
         xpatches, ypatches = _shuffle_xy_pairs(xpatches, ypatches)
 
+        num_examples = len(xdata)
         ten_percent = int(0.1*num_examples)
         ninety_percent = int(0.9*num_examples)
         xtest = xpatches[:ten_percent]
-        xtrain = xpatches[ten_percent:0.8*ninety_percent]
-        xval = xpatches[0.8*ninety_percent:]
+        xtrain = xpatches[ten_percent:int(0.8*ninety_percent)]
+        xval = xpatches[int(0.8*ninety_percent):]
 
         ytest = ypatches[:ten_percent]
-        ytrain = ypatches[ten_percent:0.8*ninety_percent]
-        yval = ypatches[0.8*ninety_percent:]
+        ytrain = ypatches[ten_percent:int(0.8*ninety_percent)]
+        yval = ypatches[int(0.8*ninety_percent):]
 
         np.save(train_filename % 'x', xtrain)
         np.save(val_filename % 'x', xval)
@@ -156,6 +157,16 @@ def foobar(path, patch_size, stride, split=0.8):
             np.load(val_filename % 'x'), \
             np.load(train_filename % 'y'), \
             np.load(val_filename % 'y')
+
+def dataset(path, patch_size, batch_size):
+    xtrain, xval, ytrain, yval = _maybe_create_dataset(path, patch_size)
+
+    def train_iter():
+        while True:
+            idx = np.random.choice(len(xtrain), batch_size)
+            yield xtrain[idx], ytrain[idx]
+
+    return train_iter, xval, yval
 
 
 def dataset(path='.', split=0.8, random_seed=1337):
@@ -239,7 +250,18 @@ def tests():
                                     [[0,1], [0,0]],
                                     [[1,0], [0,1]]]))
 
-    foobar('.', patch_size=10, stride=5)
+    patch_size = 10
+    _maybe_create_dataset('.', patch_size=patch_size, stride=5)
+    print("loading data, should not need to create new dataset")
+    _maybe_create_dataset('.', patch_size=patch_size, stride=5)
+    import os
+    os.remove("./xtrain_patchsize" + str(patch_size) + '.npy')
+    os.remove("./xval_patchsize" + str(patch_size) + '.npy'  )
+    os.remove("./xtest_patchsize" + str(patch_size) + '.npy' )
+    os.remove("./ytrain_patchsize" + str(patch_size) + '.npy')
+    os.remove("./yval_patchsize" + str(patch_size) + '.npy'  )
+    os.remove("./ytest_patchsize" + str(patch_size) + '.npy' )
+
 
 if __name__ == '__main__':
     tests()
