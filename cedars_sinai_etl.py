@@ -16,25 +16,48 @@ label_filename = "/mnt/data/ATmask sequential filenames/test%d_Mask.mat"
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
+flags.DEFINE_float('frac_data', 1.0, 'Fraction of training data to use')
 flags.DEFINE_integer('patch_size', 64, 'Size of square patches to extract from images')
 flags.DEFINE_integer('stride', 32, 'Stride between patches')
 
-def _patches(imgfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
+def imread(filename):
     '''
-    Takes an image represented by a numpy array of dimensions [l, w,
-    channel], and creates an iterator over all patches in the imagine
-    defined by the `patch_size` and the `stride` length.
+    For some reason cv2 doesn't throw an error when it doesn't find
+    the file. I want to.
     '''
-    img = cv2.imread(imgfilename)
+    img = cv2.imread(filename)
+
     if img is None:
-        raise Exception("File not found: " + '"' + imgfilename + '"')
-    img = img.astype('float32')
+        raise Exception("File not found: " + '"' + filename + '"')
+
+    return img.astype('float32')
+
+
+def _patches(img, patch_size, stride):
+    assert 2 <= len(img.shape) <= 3
+    num_xpatches = int((img.shape[0]-patch_size+1) / stride)
+    num_ypatches = int((img.shape[1]-patch_size+1) / stride)
+
+    #blah
     ret = []
-    for x in range(int((img.shape[0]-patch_size+1)/stride)):
-        for y in range(int((img.shape[1]-patch_size+1)/stride)):
-            patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
-            ret.append(patch.flatten())
+    for x in range(0, img.shape[0]-patch_size+1, stride):
+        for y in range(0, img.shape[1]-patch_size+1, stride):
+            ret.append(img[x : x+patch_size, y : y+patch_size])
     return ret
+
+# def _patches(imgfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
+#     '''
+#     Takes an image represented by a numpy array of dimensions [l, w,
+#     channel], and creates an iterator over all patches in the imagine
+#     defined by the `patch_size` and the `stride` length.
+#     '''
+#     img = imread(imgfilename)
+#     ret = []
+#     for x in range(int((img.shape[0]-patch_size+1)/stride)):
+#         for y in range(int((img.shape[1]-patch_size+1)/stride)):
+#             patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
+#             ret.append(patch.flatten())
+#     return ret
 
 def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
     '''
@@ -50,6 +73,18 @@ def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride)
             label_value -= 1 # need to start from 0.
             ret.append(label_value)
     return ret
+
+def _load_data():
+    xdata, ydata = [], []
+    num_images=224
+    for file_num in range(1, num_images+1):
+        img = imread(img_filename % file_num)
+        labels = sio.loadmat(label_filename % file_num)['ATmask']
+
+        xdata.append(img)
+        ydata.append(labels)
+
+    return xdata, ydata
 
 def dataset(path='.', split=0.8, random_seed=1337):
     '''
@@ -117,3 +152,19 @@ def dataset(path='.', split=0.8, random_seed=1337):
     np.save(path + '/ytest.npy', ytest)
 
     return xtrain, xtest, ytrain, ytest
+
+def tests():
+    xdata, ydata = _load_data()
+
+    d = xdata[0]
+    _patches(d, 64, 32)
+
+    m = np.eye(3)
+    assert np.array_equal(np.array(_patches(m, 2, 1)),
+                          np.array([[[1,0], [0,1]],
+                                    [[0,0], [1,0]],
+                                    [[0,1], [0,0]],
+                                    [[1,0], [0,1]]]))
+
+if __name__ == '__main__':
+    tests()
