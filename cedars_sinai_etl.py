@@ -5,10 +5,11 @@ Handles the ETL for Ciders-Sinai dataset.
 import cv2
 import itertools
 import numpy as np
-import scipy.io as sio
 import os
 import os.path
+import random
 import tensorflow as tf
+import scipy.io as sio
 
 img_filename = "/mnt/data/TIFF color normalized sequential filenames/test%d.tif"
 label_filename = "/mnt/data/ATmask sequential filenames/test%d_Mask.mat"
@@ -85,6 +86,43 @@ def _load_data():
         ydata.append(labels)
 
     return xdata, ydata
+
+def _shuffle_xy_pairs(xdata, ydata):
+    pairs = zip(xdata, ydata)
+    random.shuffle(pairs)
+    return zip(*pairs)
+
+def foobar(path, patch_size, stride, split=0.8):
+    train_filename = path + "/%strain_patchsize" + str(patch_size)
+    val_filename = path + "/%sval_patchsize" + str(patch_size)
+    test_filename = path + "/%stest_patchsize" + str(patch_size)
+
+    filenames = [train_filename, val_filename, test_filename]
+
+    existing_files = []
+    for f in filenames:
+        for x in ['x','y']:
+            existing_files.append(os.path.exists(f % x))
+
+    existing_files = set(existing_files)
+
+    assert(len(existing_files)) == 1, "Somehow not all slices of dataset were saved"
+
+    is_create_new_trainingset = not existing_files.pop()
+    if is_create_new_trainingset:
+        xdata, ydata = _load_data()
+
+        xpatches = [_patches(x, patch_size, stride) for x in xdata]
+        ypatches = [_patches(y, patch_size, stride) for y in ydata]
+
+        import pdb; pdb.set_trace()
+
+        xpatches, ypatches = _shuffle_xy_pairs(xpatches, ypatches)
+
+    else:
+        # load and return
+        pass
+
 
 def dataset(path='.', split=0.8, random_seed=1337):
     '''
@@ -166,6 +204,8 @@ def tests():
                                     [[0,0], [1,0]],
                                     [[0,1], [0,0]],
                                     [[1,0], [0,1]]]))
+
+    foobar('.', patch_size=10, stride=5)
 
 if __name__ == '__main__':
     tests()
