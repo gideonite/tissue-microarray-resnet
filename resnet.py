@@ -107,9 +107,7 @@ def get_architecture_or_fail(arch):
 def train_ops(xplaceholder,
               yplaceholder,
               architecture,
-              num_classes,
-              optimizer=tf.train.GradientDescentOptimizer,
-              learning_rate=0.1):
+              num_classes):
     '''
     Returns the TF ops that you can use during training.
     '''
@@ -123,26 +121,25 @@ def train_ops(xplaceholder,
     regularization = tf.get_collection('regularized_losses')
     if regularization:
         regularization = tf.add_n(regularization)
-        avg_loss = tf.add(avg_cross_entropy, regularization)
+        loss = tf.add(avg_cross_entropy, regularization)
     else:
-        avg_loss = avg_cross_entropy
+        loss = avg_cross_entropy
 
     global_step = tf.Variable(0, name='global_step', trainable=False)
-    train_op = optimizer(learning_rate).minimize(avg_loss, global_step=global_step)
 
+    learning_rate = tf.train.exponential_decay(0.1,
+                                    global_step,
+                                    10000,
+                                    .1,
+                                    staircase=True)
 
-    # # Decay the learning rate exponentially based on the number of steps.
-    # lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
-    #                                 global_step,
-    #                                 decay_steps,
-    #                                 LEARNING_RATE_DECAY_FACTOR,
-    #                                 staircase=True)
-
+    train_op = tf.train.MomentumOptimizer(learning_rate, 0.9)\
+                       .minimize(loss, global_step=global_step)
     
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1),
                                                yplaceholder), tf.float32))
 
-    return train_op, preds, avg_loss, accuracy
+    return global_step, train_op, preds, loss, accuracy
 
 def predict(xs, checkpoint_path):
     '''

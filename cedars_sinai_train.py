@@ -76,11 +76,10 @@ def main(_):
     num_channels = example.shape[-1]
     xplaceholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(FLAGS.batch_size))
-    train_step, predictor, loss, accuracy = resnet.train_ops(xplaceholder,
-                                                             yplaceholder,
-                                                             FLAGS.architecture,
-                                                             optimizer=tf.train.AdamOptimizer,
-                                                             num_classes=4)
+    global_step, train_step, predictor, loss, accuracy = resnet.train_ops(xplaceholder,
+                                                                          yplaceholder,
+                                                                          FLAGS.architecture,
+                                                                          num_classes=4)
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
 
@@ -107,15 +106,13 @@ def main(_):
     #             print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
 
         for xbatch, ybatch in train_iter():
-            iter_num, train_loss, train_acc = sess.run([train_step, loss, accuracy],
-                                                    feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+            _, train_loss, train_acc = sess.run([train_step, loss, accuracy],
+                                                feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
 
             print(train_acc)
 
-            if iter_num > 100:
-                break
-
-
+            # if global_step.eval() > 100:
+            #     break
         
 
     #     for epoch_i in xrange(FLAGS.num_epochs):
