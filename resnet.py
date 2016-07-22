@@ -109,7 +109,7 @@ def train_ops(xplaceholder,
               architecture,
               num_classes,
               optimizer=tf.train.GradientDescentOptimizer,
-              learning_rate=0.01):
+              learning_rate=0.1):
     '''
     Returns the TF ops that you can use during training.
     '''
@@ -129,6 +129,16 @@ def train_ops(xplaceholder,
 
     global_step = tf.Variable(0, name='global_step', trainable=False)
     train_op = optimizer(learning_rate).minimize(avg_loss, global_step=global_step)
+
+
+    # # Decay the learning rate exponentially based on the number of steps.
+    # lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
+    #                                 global_step,
+    #                                 decay_steps,
+    #                                 LEARNING_RATE_DECAY_FACTOR,
+    #                                 staircase=True)
+
+    
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1),
                                                yplaceholder), tf.float32))
 

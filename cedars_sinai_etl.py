@@ -46,34 +46,13 @@ def _patches(img, patch_size, stride):
             ret.append(img[x : x+patch_size, y : y+patch_size])
     return ret
 
-# def _patches(imgfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
-#     '''
-#     Takes an image represented by a numpy array of dimensions [l, w,
-#     channel], and creates an iterator over all patches in the imagine
-#     defined by the `patch_size` and the `stride` length.
-#     '''
-#     img = imread(imgfilename)
-#     ret = []
-#     for x in range(int((img.shape[0]-patch_size+1)/stride)):
-#         for y in range(int((img.shape[1]-patch_size+1)/stride)):
-#             patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
-#             ret.append(patch.flatten())
-#     return ret
-
-def _patch_labels(matfilename, patch_size=FLAGS.patch_size, stride=FLAGS.stride):
+def center_pixel(patch):
     '''
     Takes a patch of pixel-wise labels and extracts the representative
     label, namely the center of the patch.
     '''
-    img = sio.loadmat(matfilename)['ATmask']
-    ret = []
-    for x in range(int((img.shape[0]-patch_size+1)/stride)):
-        for y in range(int((img.shape[1]-patch_size+1)/stride)):
-            patch = img[x*stride:x*stride+patch_size, y*stride:y*stride+patch_size]
-            label_value = patch[patch_size/2, patch_size/2]
-            label_value -= 1 # need to start from 0.
-            ret.append(label_value)
-    return ret
+    length, height = patch.shape[:2]
+    return [patch[length/2, height/2]]
 
 def _load_data():
     xdata, ydata = [], []
@@ -161,7 +140,7 @@ def _maybe_create_dataset(path, patch_size, stride, split=0.8):
             np.load(train_filename % 'y'), \
             np.load(val_filename % 'y')
 
-def dataset(path, patch_size, stride, frac_data, batch_size):
+def dataset(path, patch_size, stride, frac_data, batch_size, label_f):
     xtrain, xval, ytrain, yval = _maybe_create_dataset(path, patch_size, stride)
 
     frac = np.random.choice(len(xtrain), int(frac_data * len(xtrain)))
@@ -171,7 +150,7 @@ def dataset(path, patch_size, stride, frac_data, batch_size):
     def train_iter():
         while True:
             idx = np.random.choice(len(xtrain), batch_size)
-            yield xtrain[idx], ytrain[idx]
+            yield xtrain[idx], np.squeeze(np.array([label_f(y) for y in ytrain[idx]]))
 
     return len(xtrain), train_iter, xval, yval
 

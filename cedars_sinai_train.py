@@ -55,11 +55,12 @@ printable_params = set(['architecture', 'num_epochs', 'num_epochs_completed',\
                         'patch_size', 'stride'])
 
 def main(_):
-    num_examples, xtrain_iter, xval, yal = etl.dataset(path=FLAGS.cache_basepath,
+    num_examples, train_iter, xval, yal = etl.dataset(path=FLAGS.cache_basepath,
                                                        patch_size=FLAGS.patch_size,
                                                        stride=FLAGS.stride,
                                                        batch_size=FLAGS.batch_size,
-                                                       frac_data=FLAGS.frac_data)
+                                                       frac_data=FLAGS.frac_data,
+                                                       label_f=etl.center_pixel)
 
     resultspath = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
     log = maybe_load_logfile(resultspath)
@@ -69,7 +70,7 @@ def main(_):
     json.dump(dict((k,v) for k,v in log.iteritems() if k in printable_params),\
               sys.stdout, indent=2)
 
-    xbatch, _ = next(xtrain_iter())
+    xbatch, _ = next(train_iter())
     example = xbatch[0]
     ndim = example.shape[0]
     num_channels = example.shape[-1]
@@ -104,6 +105,18 @@ def main(_):
     #             test_acc = sum(test_accs) / len(test_accs)
     #             log['test_accs'].append(str(test_acc))
     #             print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
+
+        for xbatch, ybatch in train_iter():
+            iter_num, train_loss, train_acc = sess.run([train_step, loss, accuracy],
+                                                    feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+
+            print(train_acc)
+
+            if iter_num > 100:
+                break
+
+
+        
 
     #     for epoch_i in xrange(FLAGS.num_epochs):
     #         # shuffle training data for each epoch
