@@ -152,7 +152,7 @@ def dataset(path, patch_size, stride, frac_data, batch_size, label_f):
             idx = np.random.choice(len(xtrain), batch_size)
             yield xtrain[idx], np.squeeze(np.array([label_f(y) for y in ytrain[idx]]))
 
-    return len(xtrain), train_iter, xval, yval
+    return len(xtrain), train_iter, xval, np.squeeze(np.array([label_f(y) for y in yval]))
 
 def tests():
     xdata, ydata = _load_data()
