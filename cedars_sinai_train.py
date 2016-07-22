@@ -55,7 +55,7 @@ printable_params = set(['architecture', 'num_epochs', 'num_epochs_completed',\
                         'patch_size', 'stride'])
 
 def main(_):
-    num_examples, train_iter, xval, yal = etl.dataset(path=FLAGS.cache_basepath,
+    num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
                                                        patch_size=FLAGS.patch_size,
                                                        stride=FLAGS.stride,
                                                        batch_size=FLAGS.batch_size,
@@ -76,10 +76,10 @@ def main(_):
     num_channels = example.shape[-1]
     xplaceholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, ndim, ndim, num_channels))
     yplaceholder = tf.placeholder(tf.int64, shape=(FLAGS.batch_size))
-    global_step, train_step, predictor, loss, accuracy = resnet.train_ops(xplaceholder,
-                                                                          yplaceholder,
-                                                                          FLAGS.architecture,
-                                                                          num_classes=4)
+    global_step, train_step, learning_rate, predictor, loss, accuracy = resnet.train_ops(xplaceholder,
+                                                                                         yplaceholder,
+                                                                                         FLAGS.architecture,
+                                                                                         num_classes=4)
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
 
@@ -88,31 +88,45 @@ def main(_):
 
     with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         sess.run(init)
-    #     try:
-    #         if not FLAGS.clobber:
-    #             saver.restore(sess, savepath)
-    #         else:
-    #             raise ValueError # TODO hack
-    #     except ValueError:
-    #         if not FLAGS.debug:
-    #             # test on the randomly intialized model, but skip this in debug mode and get straight to training.
-    #             test_accs = []
-    #             for batch_i in xrange(0, len(xtest), FLAGS.batch_size):
-    #                 xbatch = xtest[batch_i : batch_i + FLAGS.batch_size]
-    #                 ybatch = ytest[batch_i : batch_i + FLAGS.batch_size]
-    #                 test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
-    #             test_acc = sum(test_accs) / len(test_accs)
-    #             log['test_accs'].append(str(test_acc))
-    #             print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
+        try:
+            if not FLAGS.clobber:
+                saver.restore(sess, savepath)
+            else:
+                raise ValueError # TODO hack
+        except ValueError:
+            if not FLAGS.debug:
+                # test on the randomly intialized model, but skip this in debug mode and get straight to training.
+                test_accs = []
+                for batch_i in xrange(0, len(xval), FLAGS.batch_size):
+                    xbatch = xval[batch_i : batch_i + FLAGS.batch_size]
+                    ybatch = yval[batch_i : batch_i + FLAGS.batch_size]
+                    test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
+                test_acc = sum(test_accs) / len(test_accs)
+                log['test_accs'].append(str(test_acc))
+                print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
 
         for xbatch, ybatch in train_iter():
-            _, train_loss, train_acc = sess.run([train_step, loss, accuracy],
+            _, train_loss, lr, train_acc = sess.run([train_step, learning_rate, loss, accuracy],
                                                 feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
 
-            print(train_acc)
+            sys.stdout.write("batch: %d epoch: %d/%d learning rate: %f training accuracy: %f" % (global_step.eval() % num_examples,
+                                                                                                 global_step.eval() / (FLAGS.num_epochs * num_examples),
+                                                                                                 FLAGS.num_epochs,
+                                                                                                 lr,
+                                                                                                 train_acc)); sys.stdout.write('\r'); sys.stdout.flush()
 
-            # if global_step.eval() > 100:
-            #     break
+            if global_step.eval() % 100 == 0:
+                test_accs = []
+                for batch_i in xrange(0, len(xval), FLAGS.batch_size):
+                    xbatch = xval[batch_i : batch_i + FLAGS.batch_size]
+                    ybatch = yval[batch_i : batch_i + FLAGS.batch_size]
+                    test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
+                test_acc = sum(test_accs) / len(test_accs)
+                log['test_accs'].append(str(test_acc))
+                print("\n%s\t epoch: test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
+
+            if global_step.eval() > FLAGS.num_epochs * num_examples:
+                break
         
 
     #     for epoch_i in xrange(FLAGS.num_epochs):

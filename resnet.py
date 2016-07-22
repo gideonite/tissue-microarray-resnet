@@ -129,7 +129,7 @@ def train_ops(xplaceholder,
 
     learning_rate = tf.train.exponential_decay(0.1,
                                     global_step,
-                                    10000,
+                                    100000,
                                     .1,
                                     staircase=True)
 
@@ -139,7 +139,7 @@ def train_ops(xplaceholder,
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1),
                                                yplaceholder), tf.float32))
 
-    return global_step, train_op, preds, loss, accuracy
+    return global_step, train_op, learning_rate, preds, loss, accuracy
 
 def predict(xs, checkpoint_path):
     '''
