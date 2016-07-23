@@ -127,14 +127,17 @@ def train_ops(xplaceholder,
 
     global_step = tf.Variable(0, name='global_step', trainable=False)
 
-    learning_rate = tf.train.exponential_decay(0.1,
-                                    global_step,
-                                    100000,
-                                    .1,
-                                    staircase=True)
+    # learning_rate = tf.train.exponential_decay(learning_rate=0.1,
+    #                                            global_step=global_step,
+    #                                            decay_steps=100000,
+    #                                            decay_rate=.9,
+    #                                            staircase=True)
 
-    train_op = tf.train.MomentumOptimizer(learning_rate, 0.9)\
-                       .minimize(loss, global_step=global_step)
+    learning_rate = tf.placeholder(tf.float32, shape=[])
+
+    train_op = tf.train.MomentumOptimizer(learning_rate=learning_rate,
+                                          momentum=0.9)
+    train_op = train_op.minimize(loss, global_step=global_step)
     
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1),
                                                yplaceholder), tf.float32))
