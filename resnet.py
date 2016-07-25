@@ -24,12 +24,12 @@ def _get_variable(name, shape, weight_decay=None):
 
 def fully_connected(x, outdim, activation=tf.nn.relu):
     indim = x.get_shape()[-1].value
-    weights = get_variable('weights', [indim, outdim], weight_decay=0.0001)
+    weights = _get_variable('weights', [indim, outdim], weight_decay=0.0001)
     biases = tf.get_variable('biases', [outdim], initializer=tf.constant_initializer(0.0))
     return tf.matmul(x, weights) + biases
 
 def _conv2d(x, filter_shape, num_channels, stride):
-    weights = get_variable('weights', filter_shape + [x.get_shape()[-1].value, num_channels], weight_decay=0.0001)
+    weights = _get_variable('weights', filter_shape + [x.get_shape()[-1].value, num_channels], weight_decay=0.0001)
     conv = tf.nn.conv2d(x, weights, stride, padding='SAME')
     mean, variance = tf.nn.moments(conv, axes=[0,1,2])
     batch_norm = tf.nn.batch_normalization(conv, mean, variance,
@@ -42,46 +42,60 @@ def _flatten(x):
         volumn *= dim.value
     return tf.reshape(x, [-1, volumn])
 
-def inference(xplaceholder, groups):
+def _get_architecture_or_fail(arch):
+    try:
+        return architectures[arch]
+    except KeyError:
+        raise KeyError, "available architecures are: " + ",".join(architectures)
+
+def inference(xplaceholder, arch_or_groups):
     '''
     Builds the model.
+    
     '''
+
+    if type(arch_or_groups) == str:
+        groups = _get_architecture_or_fail(arch_or_groups)
+    elif type(arch_or_groups) == list:
+        groups = arch_or_groups
+    else:
+        raise TypeError, arch_or_groups, type(arch_or_groups)
 
     # First convolution expands to 64 channels
     with tf.variable_scope('first_conv_expand_layer'):
-        net = conv2d(xplaceholder, [7, 7], 64, [1, 1, 1, 1])
+        net = _conv2d(xplaceholder, [7, 7], 64, [1, 1, 1, 1])
     net = tf.nn.max_pool(
         net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     with tf.variable_scope("group_0/block_0/conv_upscale"):
-        net = conv2d(net, [1, 1], groups[0].num_filters, [1,1,1,1])
+        net = _conv2d(net, [1, 1], groups[0].num_filters, [1,1,1,1])
 
     for group_i, group in enumerate(groups):
         for block_i in range(group.num_blocks):
             name = 'group_%d/block_%d' % (group_i, block_i)
 
             with tf.variable_scope(name + '/conv_in'):
-                conv = conv2d(net, [1, 1], group.bottleneck_size, [1, 1, 1, 1])
+                conv = _conv2d(net, [1, 1], group.bottleneck_size, [1, 1, 1, 1])
                 
             with tf.variable_scope(name + '/conv_bottleneck'):
-                conv = conv2d(conv, [3, 3], group.bottleneck_size, [1, 1, 1, 1])
+                conv = _conv2d(conv, [3, 3], group.bottleneck_size, [1, 1, 1, 1])
 
             with tf.variable_scope(name + '/conv_out'):
-                conv = conv2d(conv, [1, 1], group.num_filters, [1, 1, 1, 1])
+                conv = _conv2d(conv, [1, 1], group.num_filters, [1, 1, 1, 1])
 
             net = conv + net
 
         try:
             next_group = groups[group_i+1]
             with tf.variable_scope('group_%d/conv_upscale' % group_i):
-                net = conv2d(net, [1, 1], next_group.num_filters, [1, 1, 1, 1])
+                net = _conv2d(net, [1, 1], next_group.num_filters, [1, 1, 1, 1])
         except IndexError:
             pass
 
     net_shape = net.get_shape().as_list()
     net = tf.nn.avg_pool(net, ksize=[1, net_shape[1], net_shape[2], 1],
                    strides=[1, 1, 1, 1], padding='VALID')
-    return flatten(net)
+    return _flatten(net)
     # net = fully_connected(net, num_classes)
 
 BottleneckGroup = namedtuple(
@@ -96,12 +110,6 @@ architectures = { '10_layers': [BottleneckGroup(3,128,32)],
                                  BottleneckGroup(4, 128, 512),
                                  BottleneckGroup(6, 256, 1024),
                                  BottleneckGroup(3, 512, 2048)]}
-
-def _get_architecture_or_fail(arch):
-    try:
-        return _architectures[arch]
-    except KeyError:
-        raise KeyError, "available architecures are: " + ",".join(architectures)
 
 def loss(logits, labels):
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
