@@ -33,7 +33,7 @@ def maybe_load_logfile(path):
         log = {'cmd': " ".join(sys.argv), # TODO, want to separate cmd line args from code to automatically restart experiments.
                'architecture': [g._asdict() for g in resnet._architectures[FLAGS.architecture]],
                'train_accs': [],
-               'test_accs': [],
+               'val_accs': [],
                'num_epochs': FLAGS.num_epochs,
                'num_epochs_completed': 0,
                'timestamp': timestamp,
@@ -44,14 +44,48 @@ def maybe_load_logfile(path):
 
     return log
 
+printable_params = set(['architecture', 'num_epochs', 'num_epochs_completed',\
+                        'timestamp', 'experiment_name', 'batch_size',\
+                        'patch_size', 'stride'])
+
+def run_validation(sess, accuracy, xplaceholder, yplaceholder, xval, yval):
+    accs = []
+    for batch_i in xrange(0, len(xval), FLAGS.batch_size):
+        xbatch = xval[batch_i : batch_i + FLAGS.batch_size]
+        ybatch = yval[batch_i : batch_i + FLAGS.batch_size]
+        accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
+    acc = sum(accs) / len(accs)
+    return acc
+
+def savelog(resultspath, log):
+    with open(resultspath, 'w+') as logfile:
+        try:
+            json.dump(log, logfile, indent=4)
+        except TypeError, e:
+            print(log)
+            raise TypeError, e
+
+def next_learning_rate(lr, curr_epoch):
+    if 0 <= curr_epoch <= 5:
+        return lr
+    elif 5 < curr_epoch <= 10:
+        return lr / 10.0
+    else:
+        return lr / 100.0
+
 def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
     return path
 
-printable_params = set(['architecture', 'num_epochs', 'num_epochs_completed',\
-                        'timestamp', 'experiment_name', 'batch_size',\
-                        'patch_size', 'stride'])
+def maybe_restore_model(sess, saver):
+    savepath = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
+        + '/' + FLAGS.experiment_name + '.checkpoint'
+
+    if not FLAGS.clobber:
+        saver.restore(sess, savepath)
+        return True
+    return False
 
 def main(_):
     num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
@@ -82,64 +116,49 @@ def main(_):
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
 
-    savepath = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
-        + '/' + FLAGS.experiment_name + '.checkpoint'
-
     # with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
     with tf.Session() as sess:
         sess.run(init)
-        # try:
-        #     if not FLAGS.clobber:
-        #         saver.restore(sess, savepath)
-        #     else:
-        #         raise ValueError # TODO hack
-        # except ValueError:
-        #     if not FLAGS.debug:
-        #         # test on the randomly intialized model, but skip this in debug mode and get straight to training.
-        #         test_accs = []
-        #         for batch_i in xrange(0, len(xval), FLAGS.batch_size):
-        #             xbatch = xval[batch_i : batch_i + FLAGS.batch_size]
-        #             ybatch = yval[batch_i : batch_i + FLAGS.batch_size]
-        #             test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
-        #         test_acc = sum(test_accs) / len(test_accs)
-        #         log['test_accs'].append(str(test_acc))
-        #         print("\n%s\t epoch: 0 test_accuracy=%f" %(FLAGS.experiment_name, test_acc))
 
+        if not maybe_restore_model(sess, saver):
+            # See validation accuracy for the randomly initialized model.
+            val_acc = run_validation(sess, accuracy, xplaceholder, yplaceholder,  xval, yval)
+            log['val_accs'].append(str(val_acc))
+            print("\n%s\t epoch: %d train accuracy (last batch): %f test_accuracy %f"\
+                  %(FLAGS.experiment_name, curr_epoch, train_acc, val_acc))
+
+        num_steps_total = FLAGS.num_epochs * num_examples
         train_accs = []
         test_accs = []
         for xbatch, ybatch in train_iter():
-            curr_epoch = global_step.eval() / (FLAGS.num_epochs * num_examples)
+            num_examples_seen = global_step.eval() * FLAGS.batch_size
+            curr_epoch = int(num_examples_seen / num_examples)
 
-            # TODO make something that resembles a scheduler...
-            if curr_epoch < FLAGS.num_epochs / 2:
-                lr = 0.1
-            else:
-                lr = 0.01
-                
+            lr = next_learning_rate(0.1, curr_epoch)
+
             _, train_loss, train_acc = sess.run([train_step, loss, accuracy],
                                                 feed_dict={xplaceholder: xbatch, yplaceholder: ybatch, learning_rate: lr})
 
             train_accs.append(str(train_acc))
 
-            sys.stdout.write("batch: %d epoch: %d/%d learning rate: %f training accuracy: %f" % (global_step.eval() % num_examples,
-                                                                                                 curr_epoch,
-                                                                                                 FLAGS.num_epochs,
-                                                                                                 lr,
-                                                                                                 train_acc)); sys.stdout.write('\r'); sys.stdout.flush()
+            sys.stdout.write("\n iter: %d epoch: %d/%d learning rate: %f training accuracy: %f"\
+                             % (global_step.eval(),
+                                curr_epoch,
+                                FLAGS.num_epochs,
+                                lr,
+                                train_acc)); sys.stdout.write('\r'); sys.stdout.flush()
 
-            if global_step.eval() % num_examples == 0:
-                for batch_i in xrange(0, len(xval), FLAGS.batch_size):
-                    xbatch = xval[batch_i : batch_i + FLAGS.batch_size]
-                    ybatch = yval[batch_i : batch_i + FLAGS.batch_size]
-                    test_accs.append(sess.run(accuracy, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch}))
-                test_acc = sum(test_accs) / len(test_accs)
-                log['test_accs'].append(str(test_acc))
-                print("\n%s\t epoch: %d train accuracy (last batch): %f test_accuracy %f" %(FLAGS.experiment_name, curr_epoch, train_acc, test_acc))
+            run_validation_period = 100
+            if global_step.eval() % run_validation_period == 0:
+                val_acc = run_validation(sess, accuracy, xplaceholder, yplaceholder,  xval, yval)
+                log['val_accs'].append(str(val_acc))
+                print("\n%s\t epoch: %d train accuracy (last batch): %f test_accuracy %f" %(FLAGS.experiment_name, curr_epoch, train_acc, val_acc))
 
-            if global_step.eval() > FLAGS.num_epochs * num_examples:
+            if global_step.eval() > num_steps_total:
                 break
-        
 
+            savelog(resultspath, log)
+        
     #     for epoch_i in xrange(FLAGS.num_epochs):
     #         # shuffle training data for each epoch
     #         idx = np.array(list(range(len(xtrain))))

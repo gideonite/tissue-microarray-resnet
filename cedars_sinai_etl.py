@@ -143,7 +143,8 @@ def _maybe_create_dataset(path, patch_size, stride, split=0.8):
 def dataset(path, patch_size, stride, frac_data, batch_size, label_f):
     xtrain, xval, ytrain, yval = _maybe_create_dataset(path, patch_size, stride)
 
-    frac = np.random.choice(len(xtrain), int(frac_data * len(xtrain)))
+    num_examples = int(frac_data * len(xtrain))
+    frac = np.random.choice(len(xtrain), num_examples)
     xtrain = xtrain[frac]
     ytrain = ytrain[frac]
 
@@ -152,7 +153,7 @@ def dataset(path, patch_size, stride, frac_data, batch_size, label_f):
             idx = np.random.choice(len(xtrain), batch_size)
             yield xtrain[idx], np.squeeze(np.array([label_f(y) for y in ytrain[idx]]))
 
-    return len(xtrain), train_iter, xval, np.squeeze(np.array([label_f(y) for y in yval]))
+    return num_examples, train_iter, xval, np.squeeze(np.array([label_f(y) for y in yval]))
 
 def tests():
     xdata, ydata = _load_data()
