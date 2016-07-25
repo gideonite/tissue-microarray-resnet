@@ -31,7 +31,7 @@ def maybe_load_logfile(path):
     else:
         print("creating new experiment from scratch in '" + path + "'")
         log = {'cmd': " ".join(sys.argv), # TODO, want to separate cmd line args from code to automatically restart experiments.
-               'architecture': [g._asdict() for g in resnet._architectures[FLAGS.architecture]],
+               'architecture': [g._asdict() for g in resnet.architectures[FLAGS.architecture]],
                'train_accs': [],
                'val_accs': [],
                'num_epochs': FLAGS.num_epochs,
@@ -90,6 +90,8 @@ def maybe_restore_model(sess, saver):
         pass
 
     return False
+
+def train()
 
 def main(_):
     num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
