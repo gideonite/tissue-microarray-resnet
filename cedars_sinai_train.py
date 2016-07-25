@@ -24,6 +24,7 @@ flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
 flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
 flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluation).')
 flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
+flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device placement.')
 TOWER_NAME = 'tower'
 
 def maybe_load_logfile(path):
@@ -155,6 +156,11 @@ def train():
         train_op = optimizer.apply_gradients(grads)
 
         sess = tf.Session()
+        
+        sess = tf.Session(config=tf.ConfigProto(
+            allow_soft_placement=True,
+            log_device_placement=FLAGS.log_device_placement))
+
         init = tf.initialize_all_variables()
         sess.run(init)
 
