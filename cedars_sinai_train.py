@@ -82,9 +82,13 @@ def maybe_restore_model(sess, saver):
     savepath = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
         + '/' + FLAGS.experiment_name + '.checkpoint'
 
-    if not FLAGS.clobber:
-        saver.restore(sess, savepath)
-        return True
+    try:
+        if not FLAGS.clobber:
+            saver.restore(sess, savepath)
+            return True
+    except ValueError:
+        pass
+
     return False
 
 def main(_):
