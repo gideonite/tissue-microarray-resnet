@@ -93,10 +93,7 @@ def maybe_restore_model(sess, saver):
 
     return False
 
-def tower_loss(scope):
-    num_channels = 3
-    xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels))
-    yplaceholder = tf.placeholder(tf.int64, shape=(None))
+def tower_loss(scope, xplaceholder, yplaceholder):
     
     net = resnet.inference(xplaceholder, FLAGS.architecture)
     num_labels = 4
@@ -141,11 +138,14 @@ def train():
         optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate,
                                                momentum=0.9)
 
+        num_channels = 3
+        xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels))
+        yplaceholder = tf.placeholder(tf.int64, shape=(None))
         tower_grads = []
         for i in range(FLAGS.num_gpus):
             with tf.device('/gpu:%d' % i):
                 with tf.name_scope('%s_%d' %(TOWER_NAME, i)) as scope:
-                    loss = tower_loss(scope)
+                    loss = tower_loss(scope, xplaceholder, yplaceholder)
                     tf.get_variable_scope().reuse_variables()
                     grads = optimizer.compute_gradients(loss)
                     tower_grads.append(grads)
@@ -155,11 +155,19 @@ def train():
         train_op = optimizer.apply_gradients(grads)
 
         sess = tf.Session()
+        init = tf.initialize_all_variables()
         sess.run(init)
 
-        for x,y in data:
-            sess.run([train_op], feed_dict)
-            accounting()
+        num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
+                                                           patch_size=FLAGS.patch_size,
+                                                           stride=FLAGS.stride,
+                                                           batch_size=FLAGS.batch_size,
+                                                           frac_data=FLAGS.frac_data,
+                                                           label_f=etl.center_pixel)
+
+        for xbatch, ybatch in train_iter():
+            sess.run([train_op], feed_dict={xplaceholder:xbatch, yplaceholder:ybatch, learning_rate: 0.1})
+            # accounting()
 
         sess.close()
             
