@@ -111,6 +111,25 @@ def tower_loss(scope):
     #     total_loss = tf.identity(total_loss)
     return total_loss
 
+def _average_grads(tower_grads):
+    '''
+    Taken from the models/images/cifar10 example in the TF source.
+    '''
+    average_grads = []
+    for grad_vars in zip(*tower_grads):
+        grads = []
+        for g, _ in grad_vars:
+            g = tf.expand_dims(g, 0)
+            grads.append(g)
+
+        grad = tf.concat(0, grads)
+        grad = tf.reduce_mean(grad, 0)
+
+        _, var = grad_vars[0]
+        average_grads.append((grad, var))
+
+    return average_grads
+
 def train():
     with tf.Graph().as_default(), tf.device('/cpu:0'):
         global_step = tf.get_variable(
@@ -130,6 +149,19 @@ def train():
                     tf.get_variable_scope().reuse_variables()
                     grads = optimizer.compute_gradients(loss)
                     tower_grads.append(grads)
+
+        grads = _average_grads(tower_grads)
+
+        train_op = optimizer.apply_gradients(grads)
+
+        sess = tf.Session()
+        sess.run(init)
+
+        for x,y in data:
+            sess.run([train_op], feed_dict)
+            accounting()
+
+        sess.close()
             
 def main(_):
     train()
