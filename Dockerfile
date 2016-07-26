@@ -15,3 +15,5 @@ RUN apt-get update && apt-get install -y \
 # ln -s /dev/null /dev/raw1394
 
 CMD ["/bin/bash"]
+
+WORKDIR "/mnt/code/"
