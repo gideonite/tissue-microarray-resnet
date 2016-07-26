@@ -73,9 +73,10 @@ def _save_or_show(plt, filename):
     if filename != None:
         plt.savefig(filename)
     else:
-        plt.show()
+        plt.show(block=False)
     
 def plot_train_accs(filename, output_filename=None):
+    plt.figure()
     with open(filename) as f:
         data = json.load(f)
         plt.xlim(0, sum([len(accs) for accs in data['train_accs']]))
@@ -83,24 +84,24 @@ def plot_train_accs(filename, output_filename=None):
         ys = []
         for i, train_acc in enumerate(data['train_accs']):
             for acc in train_acc:
-                ys.append(acc)
+                ys.append(1 - float(acc))
 
         plt.plot(ys, '-', color='black')
 
         plt.title(data['experiment_name'])
-        plt.ylabel('train accuracies')
+        plt.ylabel('train error')
         plt.xlabel('batch')
 
         _save_or_show(plt, output_filename)
 
 def plot_test_accs(filename, output_filename=None):
+    plt.figure()
     with open(filename) as f:
         data = json.load(f)
         plt.ylim(0,1.1)
-        plt.plot(data['test_accs'], '-')       
+        plt.plot([1 - float(y) for y in data['test_accs']], '-')       
         plt.title(data['experiment_name'])
-        plt.ylabel('test accuracy')
+        plt.ylabel('test error')
         plt.xlabel('epoch')
-        plt.show()
 
         _save_or_show(plt, output_filename)
