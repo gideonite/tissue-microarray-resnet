@@ -24,7 +24,11 @@ tumor.
 | 3 | B | benign/normal |
 | 4 | G | low grade     |
 
-#+ATTR_LATEX: :width 1.00\textwidth :placement {l}{-1.0\textwidth}
+For a patch size of 64, after train/test/validation split, we are left
+with $\sim 200,000$ training patches and $\sim 50,000$ validation patches. Test set
+has no been touched yet.
+
+#+ATTR_LATEX: :width 1.20\textwidth :placement {l}{-1.0\textwidth}
 [[./all-grades.jpg]]
 
 ** Stats
@@ -43,22 +47,19 @@ done.
   
 ResNet model with bottleneck blocks. All convolutions (and max pooling) use /same padding/. Assume an input patch of size 64 x 64 x 3.
 
-(7 x 7) x 64 channel convolution. Output is (64 x 64) x 64.
+1. (7 x 7) x 64 channel convolution. Output is (64 x 64) x 64.
 
-(3 x 3) max pool with stride (2 x 2). Output is (32 x 32) x 64.
+2. (3 x 3) max pool with stride (2 x 2). Output is (32 x 32) x 64.
 
-The first group has 3 blocks, 128 filters (for each block) and 32
-bottleneck size (for each block).
-
-(1 x 1) x 32 convolution. Output is (32 x 32) x 32.
-
-(3 x 3) x 32 convolution. Output is (32 x 32) x 32.
-
-(1 x 1) x 64 (num of input channels to the block). Output is (32 x 32) x 64.
-
-Skip connection: add the input from step () to the output of the previous step.
-
-
+3. The first group has 3 bottleneck blocks. Each one is defined by an input/output filter size (the first one is 128 filter) and a botteneck size (the first one is 32 filters).
+   
+4. First the input to the group is scaled using one by one convolutions to have the correct number of filters. In this case, (1 x 1) x 128 convolution to get to the input/output size of 128.
+  
+5. This is followed by the three bottleneck blocks of the same dimensions:
+    - (1 x 1) x 32 convolution. Output is (32 x 32) x 32.
+    - (3 x 3) x 32 convolution. Output is (32 x 32) x 32.
+    - (1 x 1) x 64 (num of input channels to the block). Output is (32 x 32) x 64.
+    - Skip connection: add the input from step () to the output of the previous step.
 
 # There are 4 bottleneck groups, each one has 3 bottleneck blocks, each
 # block has 3 layers --- an expansion layer which does 1x1 convolution
@@ -71,17 +72,49 @@ Skip connection: add the input from step () to the output of the previous step.
 # In total there are $4 \times 3 \times 3 = 36$ layers.
 
 * Results
+  
+Honestly these results looks terrible. First of all, there should be
+75% test error from a random model. Secondly, the model converges
+immediately. Why?
 
-#+CAPTION: confusion matrix for patch size 64, model trained on all the training data. Calculated from test data. Rows are the true class and columns are the predicted class. Wall time: ~16min.
-| 4132 |  1002 |  444 |   868 |
-|  862 | 10016 |  254 |  1597 |
-|  170 |   132 | 6136 |   626 |
-|  817 |  1225 |  596 | 20515 |
+*** Half of the data
 
-test1  - labels 1, 4
-test4  - labels 1, 2, 3, 4
-test33 - labels 3, 4
+#+ATTR_LATEX: :width 9cm
+[[./cedars_sinai_5dataset_trainerr.png]]
 
+#+ATTR_LATEX: :width 9cm
+[[./cedars_sinai_5dataset_testerr.png]]
+
+*** All of the data
+
+#+ATTR_LATEX: :width 9cm
+[[./cedars_sinai_fulldataset_trainerr.png]]
+
+#+ATTR_LATEX: :width 9cm
+[[./cedars_sinai_fulldataset_testerr.png]]
+
+#+CAPTION: confusion matrix for patch size 64, model trained on all the training data. Calculated from test data. Rows are the true class and columns are the predicted class. (Wall time: $\sim 16\text{ min}$.)
+| 3243 | 1763 |  300 |  1140 |
+|  602 | 9952 |  192 |  1983 |
+|  462 |  354 | 5346 |   902 |
+|  481 | 1394 |  495 | 20783 |
+
+#+CAPTION: final training and test errors after 14 epochs on the full dataset.
+| last batch training error                                 | 0.34 |
+| last epoch test error (averaged over entire training set) | 0.22 |
+
+
+# #+BEGIN_SRC python
+# with open("/mnt/code/notebooks/results/frac_data=all_correctmodel.json") as f:
+#     results = json.load(f)
+#     preds = pickle.loads(results['test_predictions'])
+#     ytest = np.load("/mnt/data/output/ytest.npy")
+#     sklearn.metrics.confusion_matrix(ytest, np.argmax(preds, axis=1))
+# #+END_SRC
+
+# test1  - labels 1, 4
+# test4  - labels 1, 2, 3, 4
+# test33 - labels 3, 4
 
 * Research and Benchmarks
 
@@ -90,7 +123,9 @@ test33 - labels 3, 4
 # correspond to the Cedars-Sinai paper?
 
 Should I use Jaccard index as well even though it seems wrong and
-somewhat convoluted?
+somewhat convoluted? This is what the creators of the dataset
+use. Perhaps I just make sure the equations work out and then
+=s/Jaccard/accuracy/= or something like that.
 
 * Next Steps
 
@@ -101,4 +136,4 @@ somewhat convoluted?
 - predict percentage?
 - predict grade? predict high-low?
 - other datasets (MSK data)
-- eventually need to talk to a pathologist
+- need to talk to a pathologist and see what's truly important / useful
