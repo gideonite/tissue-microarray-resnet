@@ -143,7 +143,7 @@ def train_ops(xplaceholder,
 
     global_step = tf.Variable(0, name='global_step', trainable=False)
 
-    learning_rate = tf.placeholder(tf.float32, shape=[])
+    learning_rate = tf.placeholder(tf.float32, shape=[], name='learning_rate')
 
     train_op = tf.train.MomentumOptimizer(learning_rate=learning_rate,
                                           momentum=0.9)
