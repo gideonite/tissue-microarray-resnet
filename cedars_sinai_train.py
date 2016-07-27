@@ -103,6 +103,11 @@ def tower_loss(scope, xplaceholder, yplaceholder):
     
     losses = tf.get_collection('losses', scope)
     total_loss = tf.add_n(losses, name='total_loss')
+    
+    accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits,1),
+                                               yplaceholder), tf.float32))
+
+    tf.add_to_collection('accuracies', accuracy)
 
     # TODO required for syncing, I think.
     # with tf.control_dependencies([loss_averages_op]):
@@ -160,8 +165,8 @@ def train():
 
         train_op = optimizer.apply_gradients(grads)
 
-        sess = tf.Session()
-        
+        total_accuracy = tf.add_n(tf.get_collection('accuracies')) / FLAGS.num_gpus
+
         sess = tf.Session(config=tf.ConfigProto(
             allow_soft_placement=True,
             log_device_placement=FLAGS.log_device_placement))
@@ -172,11 +177,12 @@ def train():
         num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
                                                            patch_size=FLAGS.patch_size,
                                                            stride=FLAGS.stride,
-                                                           batch_size=FLAGS.batch_size,
+                                                           batch_size=FLAGS.batch_size / FLAGS.num_gpus,
                                                            frac_data=FLAGS.frac_data,
                                                            label_f=etl.center_pixel)
 
-        for iter in range(10):
+        num_iterations = num_examples * FLAGS.num_epochs / FLAGS.batch_size
+        for iter in range(num_iterations):
             it = train_iter()
             feed_dict = {learning_rate: 0.1}
             for gpu_i in range(FLAGS.num_gpus):
@@ -185,10 +191,19 @@ def train():
                 feed_dict[xplaceholder] = xbatch
                 feed_dict[yplaceholder] = ybatch
 
-            _ = sess.run([train_op], feed_dict=feed_dict)
+            _, train_acc = sess.run([train_op, total_accuracy], feed_dict=feed_dict)
 
-            import pdb; pdb.set_trace()
-            print(iter, loss)
+            val_feed_dict = {}
+            for i in range(0,len(xval),FLAGS.batch_size):
+                for gpu_i in range(FLAGS.num_gpus):
+                    xplaceholder, yplaceholder = placeholders[gpu_i]
+
+                    feed_dict[xplaceholder] = xval[i:i+FLAGS.batch_size / FLAGS.num_gpus]
+                    
+            val_acc = sess.run(total_accuracy, feed_dict={placeholders[0][0]: xval[:64],    placeholders[0][1]: yval[:64],
+                                                          placeholders[1][0]: xval[64:128], placeholders[1][1]: yval[64:128]})
+
+            print('iter: %d train error: %f validation error: %f' %(iter, 1.0-train_acc, 1.0-val_acc))
 
         sess.close()
             

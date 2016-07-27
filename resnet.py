@@ -46,7 +46,7 @@ def _get_architecture_or_fail(arch):
     try:
         return architectures[arch]
     except KeyError:
-        raise KeyError, "available architecures are: " + ",".join(architectures)
+        raise KeyError, "available architectures are: " + ",".join(architectures)
 
 def inference(xplaceholder, arch_or_groups):
     '''
