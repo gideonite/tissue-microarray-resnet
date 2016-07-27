@@ -23,15 +23,31 @@ flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluat
 flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device placement.')
-flags.DEINFE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
+flags.DEFINE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
 TOWER_NAME = 'tower'
+LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
 
-def maybe_load_logfile(path):
+def save_log(log):
+    with open(LOG_PATH, 'w+') as logfile:
+        try:
+            json.dump(log, logfile, indent=4)
+        except TypeError, e:
+            print(log)
+            raise TypeError, e
+
+def maybe_load_logfile(path=LOG_PATH):
+    printable_params = set(['architecture', 'num_epochs', 'num_epochs_completed',\
+                            'timestamp', 'experiment_name', 'batch_size',\
+                            'patch_size', 'stride'])
+
     if os.path.exists(path) and not FLAGS.clobber:
         with open(path) as f:
             log = json.load(f)
+            json.dump(dict((k,v) for k,v in log.iteritems() if k in printable_params),\
+                    sys.stdout, indent=2)
+
     else:
         print("creating new experiment from scratch in '" + path + "'")
         log = {'cmd': " ".join(sys.argv), # TODO, want to separate cmd line args from code to automatically restart experiments.
@@ -46,11 +62,9 @@ def maybe_load_logfile(path):
                'patch_size': FLAGS.patch_size,
                'stride': FLAGS.stride}
 
-    return log
+        save_log(log)
 
-printable_params = set(['architecture', 'num_epochs', 'num_epochs_completed',\
-                        'timestamp', 'experiment_name', 'batch_size',\
-                        'patch_size', 'stride'])
+    return log
 
 def run_validation(sess, accuracy, xplaceholder, yplaceholder, xval, yval):
     accs = []
@@ -134,7 +148,26 @@ def _average_grads(tower_grads):
 
     return average_grads
 
+def log_accs(log, iter, train_acc, val_acc, duration):
+    log['train_accs'].append((iter, str(train_acc)))
+    log['val_accs'].append((iter, str(val_acc)))
+    print('iter: %d train error: %f0.1 validation error: %f0.1 examples/sec: %f0.1'
+          %(iter, 1.0-train_acc, 1.0-val_acc, FLAGS.batch_size / duration))
+    save_log(log)
+    return True
+
+def learning_rate_schedule(iter, num_iterations):
+    base = 0.1
+    if iter == 0:
+        return base
+    elif 0.15 * num_iterations < iter < 0.45 * num_iterations:
+        return base * 0.1
+    else:
+        return base * 0.01
+
 def train():
+    log = maybe_load_logfile()
+    
     with tf.Graph().as_default(), tf.device('/cpu:0'):
         global_step = tf.get_variable(
             'global_step', [],
@@ -185,14 +218,16 @@ def train():
         num_iterations = num_examples * FLAGS.num_epochs / FLAGS.batch_size
         for iter in range(num_iterations):
             it = train_iter()
-            feed_dict = {learning_rate: 0.1}
+            feed_dict = {learning_rate: learning_rate_schedule(iter, num_iterations)}
             for gpu_i in range(FLAGS.num_gpus):
                 xbatch, ybatch = next(it)
                 xplaceholder, yplaceholder = placeholders[gpu_i]
                 feed_dict[xplaceholder] = xbatch
                 feed_dict[yplaceholder] = ybatch
 
+            start_time = time.time()
             _, train_acc = sess.run([train_op, total_accuracy], feed_dict=feed_dict)
+            duration = time.time() - start_time
 
             if iter % FLAGS.log_frequency == 0:
                 val_accs = []
@@ -206,7 +241,7 @@ def train():
                     val_accs.append(sess.run(total_accuracy, feed_dict=val_feed_dict))
 
                 val_acc = sum(val_accs) / len(val_accs)
-                print('iter: %d train error: %f validation error: %f' %(iter, 1.0-train_acc, 1.0-val_acc))
+                log_accs(log, iter=iter, train_acc=train_acc, val_acc=val_acc, duration=duration)
 
         sess.close()
             
