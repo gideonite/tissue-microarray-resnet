@@ -15,16 +15,17 @@ FLAGS = flags.FLAGS
 
 timestamp = str(time.time())
 
-flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
-flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
-flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
 flags.DEFINE_string('architecture', '41_layers', '')
-flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
+flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
 flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluation).')
-flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
+flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
+flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device placement.')
+flags.DEINFE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
+flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
+flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
 TOWER_NAME = 'tower'
 
 def maybe_load_logfile(path):
@@ -193,17 +194,19 @@ def train():
 
             _, train_acc = sess.run([train_op, total_accuracy], feed_dict=feed_dict)
 
-            val_feed_dict = {}
-            for i in range(0,len(xval),FLAGS.batch_size):
-                for gpu_i in range(FLAGS.num_gpus):
-                    xplaceholder, yplaceholder = placeholders[gpu_i]
+            if iter % FLAGS.log_frequency == 0:
+                val_accs = []
+                for i in range(0, len(xval), FLAGS.batch_size):
+                    val_feed_dict = {}
+                    for gpu_i in range(FLAGS.num_gpus):
+                        xplaceholder, yplaceholder = placeholders[gpu_i]
+                        val_feed_dict[xplaceholder] = xval[i+gpu_i:i+(FLAGS.batch_size / FLAGS.num_gpus)]
+                        val_feed_dict[yplaceholder] = yval[i+gpu_i:i+(FLAGS.batch_size / FLAGS.num_gpus)]
 
-                    feed_dict[xplaceholder] = xval[i:i+FLAGS.batch_size / FLAGS.num_gpus]
-                    
-            val_acc = sess.run(total_accuracy, feed_dict={placeholders[0][0]: xval[:64],    placeholders[0][1]: yval[:64],
-                                                          placeholders[1][0]: xval[64:128], placeholders[1][1]: yval[64:128]})
+                    val_accs.append(sess.run(total_accuracy, feed_dict=val_feed_dict))
 
-            print('iter: %d train error: %f validation error: %f' %(iter, 1.0-train_acc, 1.0-val_acc))
+                val_acc = sum(val_accs) / len(val_accs)
+                print('iter: %d train error: %f validation error: %f' %(iter, 1.0-train_acc, 1.0-val_acc))
 
         sess.close()
             
