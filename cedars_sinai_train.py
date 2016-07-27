@@ -29,6 +29,14 @@ flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and test
 TOWER_NAME = 'tower'
 LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
 
+def mkdir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return path
+
+MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
+                 + '/' + FLAGS.experiment_name + '.checkpoint'
+
 def save_log(log):
     with open(LOG_PATH, 'w+') as logfile:
         try:
@@ -91,18 +99,10 @@ def next_learning_rate(lr, curr_epoch):
     else:
         return lr / 100.0
 
-def mkdir(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-    return path
-
 def maybe_restore_model(sess, saver):
-    savepath = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
-        + '/' + FLAGS.experiment_name + '.checkpoint'
-
     try:
         if not FLAGS.clobber:
-            saver.restore(sess, savepath)
+            saver.restore(sess, MODEL_SAVEPATH)
             return True
     except ValueError:
         pass
@@ -151,7 +151,7 @@ def _average_grads(tower_grads):
 def log_accs(log, iter, train_acc, val_acc, duration):
     log['train_accs'].append((iter, str(train_acc)))
     log['val_accs'].append((iter, str(val_acc)))
-    print('iter: %d train error: %f0.1 validation error: %f0.1 examples/sec: %f0.1'
+    print('iter: %d train error: %0.1f validation error: %0.1f examples/sec: %0.1f'
           %(iter, 1.0-train_acc, 1.0-val_acc, FLAGS.batch_size / duration))
     save_log(log)
     return True
@@ -206,7 +206,11 @@ def train():
             log_device_placement=FLAGS.log_device_placement))
 
         init = tf.initialize_all_variables()
+        saver = tf.train.Saver()
         sess.run(init)
+
+        # TODO make sure that the loss is never NaN just like in the
+        # cifar10 example. The accuracy doesn't help with that.
 
         num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
                                                            patch_size=FLAGS.patch_size,
@@ -242,6 +246,7 @@ def train():
 
                 val_acc = sum(val_accs) / len(val_accs)
                 log_accs(log, iter=iter, train_acc=train_acc, val_acc=val_acc, duration=duration)
+                saver.save(sess, MODEL_SAVEPATH)
 
         sess.close()
             
