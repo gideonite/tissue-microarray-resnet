@@ -144,17 +144,21 @@ def train():
         # xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels))
         # yplaceholder = tf.placeholder(tf.int64, shape=(None))
 
-        placeholders = [
-            [tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels)),
-             tf.placeholder(tf.int64, shape=(None))],
-            [tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels)),
-             tf.placeholder(tf.int64, shape=(None))]]
+        # placeholders = [
+        #     [tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels)),
+        #      tf.placeholder(tf.int64, shape=(None))],
+        #     [tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels)),
+        #      tf.placeholder(tf.int64, shape=(None))]]
+
+        placeholders = []
         
         for i in range(FLAGS.num_gpus):
             with tf.device('/gpu:%d' % i):
                 with tf.name_scope('%s_%d' %(TOWER_NAME, i)) as scope:
-                    xplaceholder = placeholders[i][0]
-                    yplaceholder = placeholders[i][1]
+                    xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels))
+                    yplaceholder = tf.placeholder(tf.int64, shape=(None))
+                    placeholders.append([xplaceholder, yplaceholder])
+                    
                     loss = tower_loss(scope, xplaceholder, yplaceholder)
                     grads = optimizer.compute_gradients(loss)
                     tower_grads.append(grads)
@@ -184,7 +188,8 @@ def train():
         xbatch1, ybatch1 = next(it)
         xbatch2, ybatch2 = next(it)
 
-        feed_dict = {placeholders[0][0]: xbatch1, placeholders[0][1]: ybatch1, placeholders[1][0]: xbatch2, placeholders[1][1]: ybatch2  }
+        feed_dict = {placeholders[0][0]: xbatch1, placeholders[0][1]: ybatch1,
+                     placeholders[1][0]: xbatch2, placeholders[1][1]: ybatch2  }
 
         ret = sess.run([train_op], feed_dict=feed_dict)
 
