@@ -13,7 +13,7 @@ import numpy as np
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-timestamp = str(time.time())
+timestamp = str(time.time()) # TODO make this a total duration of training.
 
 flags.DEFINE_string('architecture', '41_layers', '')
 flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
@@ -29,13 +29,13 @@ flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and test
 TOWER_NAME = 'tower'
 LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
 
+# TODO make more of these functions private
+
 def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
     return path
 
-MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
-                 + '/' + FLAGS.experiment_name + '.checkpoint'
 
 def save_log(log):
     with open(LOG_PATH, 'w+') as logfile:
@@ -100,6 +100,9 @@ def next_learning_rate(lr, curr_epoch):
         return lr / 100.0
 
 def maybe_restore_model(sess, saver):
+    # TODO fix this savepath BS
+    MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
+                     + '/' + FLAGS.experiment_name + '.checkpoint'
     try:
         if not FLAGS.clobber:
             saver.restore(sess, MODEL_SAVEPATH)
@@ -151,7 +154,7 @@ def _average_grads(tower_grads):
 def log_accs(log, iter, train_acc, val_acc, duration):
     log['train_accs'].append((iter, str(train_acc)))
     log['val_accs'].append((iter, str(val_acc)))
-    print('iter: %d train error: %0.1f validation error: %0.1f examples/sec: %0.1f'
+    print('iter: %d train error: %0.2f validation error: %0.2f examples/sec: %0.2f'
           %(iter, 1.0-train_acc, 1.0-val_acc, FLAGS.batch_size / duration))
     save_log(log)
     return True
@@ -246,6 +249,10 @@ def train():
 
                 val_acc = sum(val_accs) / len(val_accs)
                 log_accs(log, iter=iter, train_acc=train_acc, val_acc=val_acc, duration=duration)
+
+                # TODO fix this savepath BS
+                MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
+                                 + '/' + FLAGS.experiment_name + '.checkpoint'
                 saver.save(sess, MODEL_SAVEPATH)
 
         sess.close()
