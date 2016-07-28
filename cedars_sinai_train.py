@@ -18,7 +18,7 @@ prog_start = time.time()
 flags.DEFINE_string('architecture', '41_layers', '')
 flags.DEFINE_integer('batch_size', 128, 'Number of examples per GD batch')
 flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
-flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
+flags.DEFINE_boolean('resume', False, 'Resume training or clobber the stuff and start over.')
 flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluation).')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(prog_start), '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
@@ -51,7 +51,7 @@ def maybe_load_logfile(path=LOG_PATH):
                             'experiment_name', 'batch_size',\
                             'patch_size', 'stride'])
 
-    if os.path.exists(path) and not FLAGS.clobber:
+    if os.path.exists(path) and FLAGS.resume:
         with open(path) as f:
             log = json.load(f)
             json.dump(dict((k,v) for k,v in log.iteritems() if k in printable_params),\
@@ -160,19 +160,30 @@ def log_accs(log, iter, train_acc, val_acc, duration):
     return True
 
 def learning_rate_schedule(iter, num_iterations):
-    print(num_iterations)
     base = 0.1
-    if iter == 0:
+
+    if 0 <= iter < 0.10 * num_iterations:
         return base
-    elif 0.15 * num_iterations < iter < 0.45 * num_iterations:
+    elif 0.10 * num_iterations <= iter < 0.5 * num_iterations:
         return base * 0.1
-    else:
+    else: # 0.5 * num_iterations <= iter
         return base * 0.01
+
+def resume(sess, saver):
+    if FLAGS.resume:
+        latest = tf.train.latest_checkpoint(MODEL_SAVEPATH)
+        if not latest:
+            print "No checkpoint to continue from in", MODEL_SAVEPATH
+            sys.exit(1)
+        print "resuming...", latest
+        saver.restore(sess, latest)
+
 
 def train():
     log = maybe_load_logfile()
     
     with tf.Graph().as_default(), tf.device('/cpu:0'):
+        # TODO remove this
         global_step = tf.get_variable(
             'global_step', [],
             initializer=tf.constant_initializer(0), trainable=False)
@@ -201,7 +212,7 @@ def train():
 
         grads = _average_grads(tower_grads)
 
-        train_op = optimizer.apply_gradients(grads)
+        train_op = optimizer.apply_gradients(grads, global_step=global_step)
 
         total_accuracy = tf.add_n(tf.get_collection('accuracies')) / FLAGS.num_gpus
 
@@ -213,23 +224,24 @@ def train():
         saver = tf.train.Saver()
         sess.run(init)
 
+        resume(sess, saver)
+
         # TODO make sure that the loss is never NaN just like in the
         # cifar10 example. The accuracy doesn't help with that.
 
+        # label_f = etl.center_pixel
         label_f = lambda patch: etl.collapse_classes(etl.center_pixel(patch))
         num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
                                                            patch_size=FLAGS.patch_size,
                                                            stride=FLAGS.stride,
                                                            batch_size=FLAGS.batch_size / FLAGS.num_gpus,
                                                            frac_data=FLAGS.frac_data,
-                                                           # label_f=label_f)
-                                                           label_f=etl.center_pixel)
+                                                           label_f=label_f)
 
         it = train_iter()
         num_iterations = num_examples * FLAGS.num_epochs / FLAGS.batch_size
         for iter in range(num_iterations):
             lr = learning_rate_schedule(iter, num_iterations)
-            print("learning rate: %f" % lr)
             feed_dict = {learning_rate: lr}
             for gpu_i in range(FLAGS.num_gpus):
                 xbatch, ybatch = next(it)
@@ -253,12 +265,14 @@ def train():
                     val_accs.append(sess.run(total_accuracy, feed_dict=val_feed_dict))
 
                 val_acc = sum(val_accs) / len(val_accs)
+                print("learning rate: %f" % lr)
                 log_accs(log, iter=iter, train_acc=train_acc, val_acc=val_acc, duration=duration)
 
                 # TODO fix this savepath BS
                 MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
                                  + '/' + FLAGS.experiment_name + '.checkpoint'
-                saver.save(sess, MODEL_SAVEPATH)
+                print('saving..')
+                saver.save(sess, MODEL_SAVEPATH, global_step=global_step)
 
         sess.close()
             
