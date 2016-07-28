@@ -13,19 +13,19 @@ import numpy as np
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-timestamp = str(time.time()) # TODO make this a total duration of training.
+prog_start = time.time()
 
 flags.DEFINE_string('architecture', '41_layers', '')
-flags.DEFINE_integer('batch_size', 64, 'Number of examples per GD batch')
+flags.DEFINE_integer('batch_size', 128, 'Number of examples per GD batch')
 flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_boolean('clobber', False, 'Start training from scratch or not')
 flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluation).')
-flags.DEFINE_string('experiment_name', 'experiment_' + str(timestamp), '')
+flags.DEFINE_string('experiment_name', 'experiment_' + str(prog_start), '')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device placement.')
 flags.DEFINE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
-flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
+flags.DEFINE_integer('num_gpus', 4, 'Number of GPUs to use for training and testing.')
 TOWER_NAME = 'tower'
 LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
 
@@ -40,6 +40,7 @@ def mkdir(path):
 def save_log(log):
     with open(LOG_PATH, 'w+') as logfile:
         try:
+            log['time_elapsed'] = str(time.time() - prog_start)
             json.dump(log, logfile, indent=4)
         except TypeError, e:
             print(log)
@@ -47,7 +48,7 @@ def save_log(log):
 
 def maybe_load_logfile(path=LOG_PATH):
     printable_params = set(['architecture', 'num_epochs', 'num_epochs_completed',\
-                            'timestamp', 'experiment_name', 'batch_size',\
+                            'experiment_name', 'batch_size',\
                             'patch_size', 'stride'])
 
     if os.path.exists(path) and not FLAGS.clobber:
@@ -64,7 +65,6 @@ def maybe_load_logfile(path=LOG_PATH):
                'val_accs': [],
                'num_epochs': FLAGS.num_epochs,
                'num_epochs_completed': 0,
-               'timestamp': timestamp,
                'experiment_name': FLAGS.experiment_name,
                'batch_size': FLAGS.batch_size,
                'patch_size': FLAGS.patch_size,
@@ -154,12 +154,13 @@ def _average_grads(tower_grads):
 def log_accs(log, iter, train_acc, val_acc, duration):
     log['train_accs'].append((iter, str(train_acc)))
     log['val_accs'].append((iter, str(val_acc)))
-    print('iter: %d train error: %0.2f validation error: %0.2f examples/sec: %0.2f'
-          %(iter, 1.0-train_acc, 1.0-val_acc, FLAGS.batch_size / duration))
+    print('iter: %d train acc: %0.2f validation acc: %0.2f examples/sec: %0.2f'
+          %(iter, train_acc, val_acc, FLAGS.batch_size / duration))
     save_log(log)
     return True
 
 def learning_rate_schedule(iter, num_iterations):
+    print(num_iterations)
     base = 0.1
     if iter == 0:
         return base
@@ -215,17 +216,21 @@ def train():
         # TODO make sure that the loss is never NaN just like in the
         # cifar10 example. The accuracy doesn't help with that.
 
+        label_f = lambda patch: etl.collapse_classes(etl.center_pixel(patch))
         num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
                                                            patch_size=FLAGS.patch_size,
                                                            stride=FLAGS.stride,
                                                            batch_size=FLAGS.batch_size / FLAGS.num_gpus,
                                                            frac_data=FLAGS.frac_data,
+                                                           # label_f=label_f)
                                                            label_f=etl.center_pixel)
 
+        it = train_iter()
         num_iterations = num_examples * FLAGS.num_epochs / FLAGS.batch_size
         for iter in range(num_iterations):
-            it = train_iter()
-            feed_dict = {learning_rate: learning_rate_schedule(iter, num_iterations)}
+            lr = learning_rate_schedule(iter, num_iterations)
+            print("learning rate: %f" % lr)
+            feed_dict = {learning_rate: lr}
             for gpu_i in range(FLAGS.num_gpus):
                 xbatch, ybatch = next(it)
                 xplaceholder, yplaceholder = placeholders[gpu_i]
