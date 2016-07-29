@@ -15,6 +15,8 @@ Test the model on CIFAR-10 to debug the code.
 Look into different SGD algorithms. Investigate what the Torch people
 say about the ones that choose LR automagically.
 
+Try a smaller model.
+
 Data Side
 =========
 
