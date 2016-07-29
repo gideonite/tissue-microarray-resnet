@@ -101,6 +101,7 @@ def next_learning_rate(lr, curr_epoch):
 
 def maybe_restore_model(sess, saver):
     # TODO fix this savepath BS
+    # TODO maybe delete this func.
     MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
                      + '/' + FLAGS.experiment_name + '.checkpoint'
     try:
@@ -171,6 +172,8 @@ def learning_rate_schedule(iter, num_iterations):
 
 def resume(sess, saver):
     if FLAGS.resume:
+        MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
+                         + '/' + FLAGS.experiment_name + '.checkpoint'
         latest = tf.train.latest_checkpoint(MODEL_SAVEPATH)
         if not latest:
             print "No checkpoint to continue from in", MODEL_SAVEPATH
@@ -192,6 +195,8 @@ def train():
 
         optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate,
                                                momentum=0.9)
+        
+        # optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 
         num_channels = 3
         tower_grads = []
@@ -229,8 +234,8 @@ def train():
         # TODO make sure that the loss is never NaN just like in the
         # cifar10 example. The accuracy doesn't help with that.
 
-        # label_f = etl.center_pixel
-        label_f = lambda patch: etl.collapse_classes(etl.center_pixel(patch))
+        label_f = etl.center_pixel
+        # label_f = lambda patch: etl.collapse_classes(etl.center_pixel(patch))
         num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
                                                            patch_size=FLAGS.patch_size,
                                                            stride=FLAGS.stride,
