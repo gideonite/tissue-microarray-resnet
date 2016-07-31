@@ -37,7 +37,6 @@ def mkdir(path):
         os.makedirs(path)
     return path
 
-
 def save_log(log):
     with open(LOG_PATH, 'w+') as logfile:
         try:
@@ -117,8 +116,11 @@ def maybe_restore_model(sess, saver):
 def tower_loss(scope, xplaceholder, yplaceholder):
     
     net = resnet.inference(xplaceholder, FLAGS.architecture)
-    num_labels = 4
-    logits = resnet.fully_connected(net, outdim=num_labels)
+
+    final_layer_types = {'center_pixel_2labels': lambda net: resnet.fully_connected(net, outdim=2),
+                         'center_pixel_4labels': lambda net: resnet.fully_connected(net, outdim=4)}
+    logits = final_layer_types[FLAGS.label_f](net)
+    
     _ = resnet.loss(logits, yplaceholder)
     
     losses = tf.get_collection('losses', scope)
