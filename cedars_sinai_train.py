@@ -21,6 +21,7 @@ flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_boolean('resume', False, 'Resume training or clobber the stuff and start over.')
 flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluation).')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(prog_start), '')
+flags.DEFINE_string('label_f', 'center_pixel_4labels', 'Which function to use for calculating the label for a patch')
 flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device placement.')
 flags.DEFINE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
@@ -234,14 +235,17 @@ def train():
         # TODO make sure that the loss is never NaN just like in the
         # cifar10 example. The accuracy doesn't help with that.
 
-        label_f = etl.center_pixel
-        # label_f = lambda patch: etl.collapse_classes(etl.center_pixel(patch))
+        label_functions = {
+            'center_pixel_2labels': lambda patch: etl.collapse_classes(etl.center_pixel(patch)),
+            'center_pixel_4labels': etl.center_pixel
+        }
+
         num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
                                                            patch_size=FLAGS.patch_size,
                                                            stride=FLAGS.stride,
                                                            batch_size=FLAGS.batch_size / FLAGS.num_gpus,
                                                            frac_data=FLAGS.frac_data,
-                                                           label_f=label_f)
+                                                           label_f=label_functions[FLAGS.label_f])
 
         it = train_iter()
         num_iterations = num_examples * FLAGS.num_epochs / FLAGS.batch_size
