@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
+import os
 import sys
 import cedars_sinai_etl
 import resnet
@@ -132,3 +133,17 @@ def plot_test_accs(filename, output_filename=None):
         plt.xlabel('epoch')
 
         _save_or_show(plt, output_filename)
+
+
+
+if __name__ == '__main__':
+    # results_titles_outputs = [['$DIR/2labels_75epochs.json', 'Cancer/Non-Cancer 41 Layer ResNet', 'notes/cedars_sinai_binary_41layers.png'],
+    #                           ['$DIR/2labels_shallownet.json', 'Cancer/Non-cancer 10 Layer ResNet', 'notes/cedars_sinai_binary_10layers.png'],
+    #                           ['$DIR/4labels_adamopt01.json', '4 Labels Using ADAM Optimizer', 'notes/cedars_sinai_4labels_adamopt.png'],
+    #                           ['$DIR/4labels_adamopt_nodecay.json', '4 Labels Using ADAM Optimizer Without Weight Decay', 'notes/cedars_sinai_4labels_adamopt_noweightdecay.png']]
+
+    # for filename, title, output_filename in results_titles_outputs:
+    #     filename = os.path.expandvars(filename)
+    #     plot_train_val_accs(filename, title=title, output_filename=output_filename)
+
+    pass
