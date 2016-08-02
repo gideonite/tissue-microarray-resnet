@@ -94,6 +94,33 @@ def plot_train_accs(filename, output_filename=None):
 
         _save_or_show(plt, output_filename)
 
+def plot_train_val_accs(filename, output_filename=None, title=None):
+    '''
+    Remember that this considers accs to be recorded in one continuous
+    stream with x,y pairs (iter num, train/val accuracy).
+    '''
+    plt.figure()
+    with open(filename) as f:
+        data = json.load(f)
+
+        plt.xlim([0, len(data['train_accs'])])
+
+        print("final train", [a[1] for a in data['train_accs']][-1])
+        print("final val", [a[1] for a in data['val_accs']][-1])
+
+        train_plot = plt.plot([100.0 * (1.0 - float(acc[1])) for acc in data['train_accs']] , '--', color='black', label='Training Error')
+        val_plot = plt.plot([100.0 * (1.0 - float(acc[1])) for acc in data['val_accs']], '-', color='red', label='Validation Error')
+        plt.legend()
+
+        if title == None:
+            title = data['experiment_name']
+
+        plt.title(title)
+        plt.ylabel('error (%)')
+        plt.xlabel('iteration (1e2)')
+
+        _save_or_show(plt, output_filename)
+
 def plot_test_accs(filename, output_filename=None):
     plt.figure()
     with open(filename) as f:
