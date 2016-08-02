@@ -100,14 +100,14 @@ BottleneckGroup = namedtuple(
     'BottleneckGroup', ['num_blocks', 'num_filters', 'bottleneck_size'])
 
 architectures = { '10_layers': [BottleneckGroup(3,128,32)],
-                   '41_layers': [BottleneckGroup(3, 128, 32),
-                                 BottleneckGroup(3, 256, 64),
-                                 BottleneckGroup(3, 512, 128),
-                                 BottleneckGroup(3, 1024, 256)],
-                   '50_layers': [BottleneckGroup(3, 64, 256),
-                                 BottleneckGroup(4, 128, 512),
-                                 BottleneckGroup(6, 256, 1024),
-                                 BottleneckGroup(3, 512, 2048)]}
+                  '41_layers': [BottleneckGroup(3, 128, 32),
+                                BottleneckGroup(3, 256, 64),
+                                BottleneckGroup(3, 512, 128),
+                                BottleneckGroup(3, 1024, 256)],
+                  '50_layers': [BottleneckGroup(3, 64, 256),
+                                BottleneckGroup(4, 128, 512),
+                                BottleneckGroup(6, 256, 1024),
+                                BottleneckGroup(3, 512, 2048)]}
 
 def loss(logits, labels):
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(

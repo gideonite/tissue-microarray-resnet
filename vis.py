@@ -138,6 +138,7 @@ def plot_test_accs(filename, output_filename=None):
 
 
 if __name__ == '__main__':
+    # TODO come up with a light weight cli.
     # results_titles_outputs = [['notebooks/results/2labels_75epochs.json', 'Cancer/Non-Cancer 41 Layer ResNet', 'notes/cedars_sinai_binary_41layers.png'],
     #                           ['notebooks/results/2labels_shallownet.json', 'Cancer/Non-cancer 10 Layer ResNet', 'notes/cedars_sinai_binary_10layers.png'],
     #                           ['notebooks/results/4labels_adamopt01.json', '4 Labels Using ADAM Optimizer', 'notes/cedars_sinai_4labels_adamopt.png'],
