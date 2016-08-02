@@ -105,6 +105,7 @@ def plot_train_val_accs(filename, output_filename=None, title=None):
         data = json.load(f)
 
         plt.xlim([0, len(data['train_accs'])])
+        plt.ylim(0,100)
 
         print("final train", [a[1] for a in data['train_accs']][-1])
         print("final val", [a[1] for a in data['val_accs']][-1])
@@ -137,13 +138,12 @@ def plot_test_accs(filename, output_filename=None):
 
 
 if __name__ == '__main__':
-    # results_titles_outputs = [['$DIR/2labels_75epochs.json', 'Cancer/Non-Cancer 41 Layer ResNet', 'notes/cedars_sinai_binary_41layers.png'],
-    #                           ['$DIR/2labels_shallownet.json', 'Cancer/Non-cancer 10 Layer ResNet', 'notes/cedars_sinai_binary_10layers.png'],
-    #                           ['$DIR/4labels_adamopt01.json', '4 Labels Using ADAM Optimizer', 'notes/cedars_sinai_4labels_adamopt.png'],
-    #                           ['$DIR/4labels_adamopt_nodecay.json', '4 Labels Using ADAM Optimizer Without Weight Decay', 'notes/cedars_sinai_4labels_adamopt_noweightdecay.png']]
+    # results_titles_outputs = [['notebooks/results/2labels_75epochs.json', 'Cancer/Non-Cancer 41 Layer ResNet', 'notes/cedars_sinai_binary_41layers.png'],
+    #                           ['notebooks/results/2labels_shallownet.json', 'Cancer/Non-cancer 10 Layer ResNet', 'notes/cedars_sinai_binary_10layers.png'],
+    #                           ['notebooks/results/4labels_adamopt01.json', '4 Labels Using ADAM Optimizer', 'notes/cedars_sinai_4labels_adamopt.png'],
+    #                           ['notebooks/results/4labels_adamopt_nodecay.json', '4 Labels Using ADAM Optimizer Without Weight Decay', 'notes/cedars_sinai_4labels_adamopt_noweightdecay.png']]
 
     # for filename, title, output_filename in results_titles_outputs:
     #     filename = os.path.expandvars(filename)
     #     plot_train_val_accs(filename, title=title, output_filename=output_filename)
-
     pass
