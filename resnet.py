@@ -51,7 +51,6 @@ def _get_architecture_or_fail(arch):
 def inference(xplaceholder, arch_or_groups):
     '''
     Builds the model.
-    
     '''
 
     if type(arch_or_groups) == str:
@@ -96,7 +95,6 @@ def inference(xplaceholder, arch_or_groups):
     net = tf.nn.avg_pool(net, ksize=[1, net_shape[1], net_shape[2], 1],
                    strides=[1, 1, 1, 1], padding='VALID')
     return _flatten(net)
-    # net = fully_connected(net, num_classes)
 
 BottleneckGroup = namedtuple(
     'BottleneckGroup', ['num_blocks', 'num_filters', 'bottleneck_size'])
