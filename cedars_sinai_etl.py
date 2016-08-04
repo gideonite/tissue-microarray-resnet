@@ -52,14 +52,14 @@ def center_pixel(patch):
     label, namely the center of the patch.
     '''
     length, height = patch.shape[:2]
-    return np.array([patch[length/2, height/2]])
+    return np.array([patch[length/2, height/2]-1]) # labels are 0-indexed.
 
 def collapse_classes(classes):
-    classes[classes == 1] = 0
-    classes[classes == 3] = 0
+    classes[classes == 0] = 0
+    classes[classes == 2] = 0
 
-    classes[classes == 2] = 1
-    classes[classes == 4] = 1
+    classes[classes == 1] = 1
+    classes[classes == 3] = 1
 
     return classes
 

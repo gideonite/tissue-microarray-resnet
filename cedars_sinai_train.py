@@ -117,8 +117,6 @@ def tower_loss(scope, xplaceholder, yplaceholder):
     
     net = resnet.inference(xplaceholder, FLAGS.architecture)
 
-    final_layer_types = {'center_pixel_2labels': lambda net: resnet.fully_connected(net, outdim=2),
-                         'center_pixel_4labels': lambda net: resnet.fully_connected(net, outdim=4)}
     logits = final_layer_types[FLAGS.label_f](net)
     
     _ = resnet.loss(logits, yplaceholder)
@@ -192,10 +190,11 @@ learning_rate = tf.placeholder(tf.float32, shape=[])
 
 optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 
-label_functions = {
-    'center_pixel_2labels': lambda patch: etl.collapse_classes(etl.center_pixel(patch)),
-    'center_pixel_4labels': etl.center_pixel
-}
+label_functions = {'center_pixel_2labels': lambda patch: etl.collapse_classes(etl.center_pixel(patch)),
+                   'center_pixel_4labels': etl.center_pixel}
+
+final_layer_types = {'center_pixel_2labels': lambda net: resnet.fully_connected(net, outdim=2),
+                     'center_pixel_4labels': lambda net: resnet.fully_connected(net, outdim=4)}
 
 def single_gpu_train():
     log = maybe_load_logfile()
@@ -216,7 +215,7 @@ def single_gpu_train():
     logits = final_layer_types[FLAGS.label_f](net)
     loss = resnet.loss(logits, yplaceholder)
 
-    top_k_op = tf.nn.in_top_k(logits, labels, 1)
+    top_k_op = tf.nn.in_top_k(logits, yplaceholder, 1)
 
     sess = tf.Session()
     init = tf.initialize_all_variables()
@@ -225,9 +224,12 @@ def single_gpu_train():
     it = train_iter()
     while True:
         xbatch, ybatch = next(it)
-        loss, foo = sess.run([loss, top_k_op], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+        loss = sess.run(loss, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+        # preds = sess.run(logits, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+        # topk = sess.run(top_k_op, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+        # batch_acc = np.average(topk)
 
-        print(loss)
+        # print(loss, batch_acc)
 
     sess.close()
 
