@@ -190,6 +190,5 @@ def tests():
     os.remove("./yval_patchsize" + str(patch_size) + '.npy'  )
     os.remove("./ytest_patchsize" + str(patch_size) + '.npy' )
 
-
 if __name__ == '__main__':
     tests()
