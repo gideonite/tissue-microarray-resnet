@@ -189,7 +189,6 @@ def train():
     log = maybe_load_logfile()
     
     with tf.Graph().as_default(), tf.device('/cpu:0'):
-        # TODO remove this
         global_step = tf.get_variable(
             'global_step', [],
             initializer=tf.constant_initializer(0), trainable=False)
@@ -264,26 +263,28 @@ def train():
             _, train_acc = sess.run([train_op, total_accuracy], feed_dict=feed_dict)
             duration = time.time() - start_time
 
-            if iter % FLAGS.log_frequency == 0:
-                val_accs = []
-                for i in range(0, len(xval), FLAGS.batch_size):
-                    val_feed_dict = {}
-                    for gpu_i in range(FLAGS.num_gpus):
-                        xplaceholder, yplaceholder = placeholders[gpu_i]
-                        val_feed_dict[xplaceholder] = xval[i+gpu_i:i+(FLAGS.batch_size / FLAGS.num_gpus)]
-                        val_feed_dict[yplaceholder] = yval[i+gpu_i:i+(FLAGS.batch_size / FLAGS.num_gpus)]
+            print(iter, train_acc)
 
-                    val_accs.append(sess.run(total_accuracy, feed_dict=val_feed_dict))
+            # if iter % FLAGS.log_frequency == 0:
+            #     val_accs = []
+            #     for i in range(0, len(xval), FLAGS.batch_size):
+            #         val_feed_dict = {}
+            #         for gpu_i in range(FLAGS.num_gpus):
+            #             xplaceholder, yplaceholder = placeholders[gpu_i]
+            #             val_feed_dict[xplaceholder] = xval[i+gpu_i:i+(FLAGS.batch_size / FLAGS.num_gpus)]
+            #             val_feed_dict[yplaceholder] = yval[i+gpu_i:i+(FLAGS.batch_size / FLAGS.num_gpus)]
 
-                val_acc = sum(val_accs) / len(val_accs)
-                print("learning rate: %f" % lr)
-                log_accs(log, iter=iter, train_acc=train_acc, val_acc=val_acc, duration=duration)
+            #         val_accs.append(sess.run(total_accuracy, feed_dict=val_feed_dict))
 
-                # TODO fix this savepath BS
-                MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
-                                 + '/' + FLAGS.experiment_name + '.checkpoint'
-                print('saving..')
-                saver.save(sess, MODEL_SAVEPATH, global_step=global_step)
+            #     val_acc = sum(val_accs) / len(val_accs)
+            #     print("learning rate: %f" % lr)
+            #     log_accs(log, iter=iter, train_acc=train_acc, val_acc=val_acc, duration=duration)
+
+            #     # TODO fix this savepath BS
+            #     MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
+            #                      + '/' + FLAGS.experiment_name + '.checkpoint'
+            #     print('saving..')
+            #     saver.save(sess, MODEL_SAVEPATH, global_step=global_step)
 
         sess.close()
             

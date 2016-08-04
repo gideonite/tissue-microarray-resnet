@@ -159,8 +159,10 @@ def dataset(path, patch_size, stride, frac_data, batch_size, label_f):
 
     def train_iter():
         while True:
-            idx = np.random.choice(len(xtrain), batch_size)
-            yield xtrain[idx], np.squeeze(np.array([label_f(y) for y in ytrain[idx]]))
+            yield np.array(xtrain[0:2]), np.squeeze(np.array([label_f(y) for y in ytrain[0:2]]))
+            
+            # idx = np.random.choice(len(xtrain), batch_size)
+            # yield xtrain[idx], np.squeeze(np.array([label_f(y) for y in ytrain[idx]]))
 
     return num_examples, train_iter, xval, np.squeeze(np.array([label_f(y) for y in yval]))
 

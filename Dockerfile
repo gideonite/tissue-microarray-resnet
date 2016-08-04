@@ -10,9 +10,10 @@ RUN apt-get update && apt-get install -y \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# some kind of cv2 nonsense. This maps some kind of raw camera input
-# device to `/dev/null`. Otherwise `import cv2` results in an error.
-# ln -s /dev/null /dev/raw1394
+RUN pip install keras
+
+# set tensorflow as the backend
+RUN mkdir ~/.keras && echo {\"epsilon\": 1e-07, \"floatx\": \"float32\", \"backend\": \"tensorflow\"} > ~/.keras/keras.json
 
 CMD ["/bin/bash"]
 
