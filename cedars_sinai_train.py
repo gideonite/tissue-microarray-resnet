@@ -26,7 +26,7 @@ flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
 flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device placement.')
 flags.DEFINE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
-flags.DEFINE_integer('num_gpus', 4, 'Number of GPUs to use for training and testing.')
+flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
 TOWER_NAME = 'tower'
 LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
 
@@ -321,8 +321,12 @@ def multi_gpu_train():
         sess.close()
             
 def main(_):
-    single_gpu_train()
-    # train()
+    is_single_gpu = FLAGS.num_gpus == 1
+
+    if is_single_gpu:
+        single_gpu_train()
+    else:
+        multi_gpu_train()
 
 if __name__ == '__main__':
     tf.app.run()
