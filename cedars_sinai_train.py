@@ -224,12 +224,9 @@ def single_gpu_train():
     it = train_iter()
     while True:
         xbatch, ybatch = next(it)
-        loss = sess.run(loss, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-        # preds = sess.run(logits, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-        # topk = sess.run(top_k_op, feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-        # batch_acc = np.average(topk)
-
-        # print(loss, batch_acc)
+        batch_loss, topk = sess.run([loss, top_k_op], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+        batch_acc = np.average(topk)
+        print(batch_loss, batch_acc)
 
     sess.close()
 
