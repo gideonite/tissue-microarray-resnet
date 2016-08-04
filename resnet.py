@@ -22,6 +22,7 @@ def _get_variable(name, shape, weight_decay=None):
 
     return var
 
+# TODO `activation` param is currently unused. Linter??
 def fully_connected(x, outdim, activation=tf.nn.relu):
     indim = x.get_shape()[-1].value
     weights = _get_variable('weights', [indim, outdim], weight_decay=0.0001)

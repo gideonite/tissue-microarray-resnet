@@ -3,6 +3,8 @@ Model Side
 
 Try a smaller model on a single GPU.
 
+Exponential Moving Averages??
+
 Data Side
 =========
 
@@ -21,3 +23,5 @@ Software
 ========
 
 Upgrade TF version.
+
+Am I using cudnn??

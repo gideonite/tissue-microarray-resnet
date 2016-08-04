@@ -126,6 +126,7 @@ def tower_loss(scope, xplaceholder, yplaceholder):
     losses = tf.get_collection('losses', scope)
     total_loss = tf.add_n(losses, name='total_loss')
     
+    # TODO is this wrong??
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits,1),
                                                yplaceholder), tf.float32))
 
@@ -184,8 +185,53 @@ def resume(sess, saver):
         print "resuming...", latest
         saver.restore(sess, latest)
 
+learning_rate = tf.placeholder(tf.float32, shape=[])
 
-def train():
+# optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate,
+#                                         momentum=0.9)
+
+optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
+
+label_functions = {
+    'center_pixel_2labels': lambda patch: etl.collapse_classes(etl.center_pixel(patch)),
+    'center_pixel_4labels': etl.center_pixel
+}
+
+def single_gpu_train():
+    log = maybe_load_logfile()
+
+    num_channels = 3
+    
+    xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels), name='xplaceholder')
+    yplaceholder = tf.placeholder(tf.int64, shape=(None), name='yplaceholder')
+    
+    num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
+                                                    patch_size=FLAGS.patch_size,
+                                                    stride=FLAGS.stride,
+                                                    batch_size=FLAGS.batch_size,
+                                                    frac_data=FLAGS.frac_data,
+                                                    label_f=label_functions[FLAGS.label_f])
+
+    net = resnet.inference(xplaceholder, FLAGS.architecture)
+    logits = final_layer_types[FLAGS.label_f](net)
+    loss = resnet.loss(logits, yplaceholder)
+
+    top_k_op = tf.nn.in_top_k(logits, labels, 1)
+
+    sess = tf.Session()
+    init = tf.initialize_all_variables()
+    sess.run(init)
+
+    it = train_iter()
+    while True:
+        xbatch, ybatch = next(it)
+        loss, foo = sess.run([loss, top_k_op], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+
+        print(loss)
+
+    sess.close()
+
+def multi_gpu_train():
     log = maybe_load_logfile()
     
     with tf.Graph().as_default(), tf.device('/cpu:0'):
@@ -193,13 +239,6 @@ def train():
         global_step = tf.get_variable(
             'global_step', [],
             initializer=tf.constant_initializer(0), trainable=False)
-
-        learning_rate = tf.placeholder(tf.float32, shape=[])
-
-        optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate,
-                                               momentum=0.9)
-        
-        # optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 
         num_channels = 3
         tower_grads = []
@@ -236,11 +275,6 @@ def train():
 
         # TODO make sure that the loss is never NaN just like in the
         # cifar10 example. The accuracy doesn't help with that.
-
-        label_functions = {
-            'center_pixel_2labels': lambda patch: etl.collapse_classes(etl.center_pixel(patch)),
-            'center_pixel_4labels': etl.center_pixel
-        }
 
         num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
                                                            patch_size=FLAGS.patch_size,
@@ -288,7 +322,8 @@ def train():
         sess.close()
             
 def main(_):
-    train()
+    single_gpu_train()
+    # train()
 
 if __name__ == '__main__':
     tf.app.run()
