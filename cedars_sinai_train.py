@@ -211,9 +211,14 @@ def single_gpu_train():
                                                     frac_data=FLAGS.frac_data,
                                                     label_f=label_functions[FLAGS.label_f])
 
+    # import cedars_sinai_etl2 as etl2
+    # train_iter = etl2.minidata(patch_size=FLAGS.patch_size, stride=FLAGS.stride, batch_size=FLAGS.batch_size, label_f=etl2.center_pixel)
+
     net = resnet.inference(xplaceholder, FLAGS.architecture)
     logits = final_layer_types[FLAGS.label_f](net)
     loss = resnet.loss(logits, yplaceholder)
+
+    train_step = optimizer.minimize(loss) # TODO global step
 
     top_k_op = tf.nn.in_top_k(logits, yplaceholder, 1)
 
@@ -224,7 +229,7 @@ def single_gpu_train():
     it = train_iter()
     while True:
         xbatch, ybatch = next(it)
-        batch_loss, topk = sess.run([loss, top_k_op], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+        _, batch_loss, topk, preds = sess.run([train_step, loss, top_k_op, logits], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
         batch_acc = np.average(topk)
         print(batch_loss, batch_acc)
 
