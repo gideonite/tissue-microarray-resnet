@@ -10,6 +10,7 @@ import cedars_sinai_etl as etl
 import resnet
 import numpy as np
 
+
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
@@ -205,13 +206,6 @@ def single_gpu_train():
     xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels), name='xplaceholder')
     yplaceholder = tf.placeholder(tf.int64, shape=(None), name='yplaceholder')
     
-    # num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
-    #                                                 patch_size=FLAGS.patch_size,
-    #                                                 stride=FLAGS.stride,
-    #                                                 batch_size=FLAGS.batch_size,
-    #                                                 frac_data=FLAGS.frac_data,
-    #                                                 label_f=label_functions[FLAGS.label_f])
-
     import cedars_sinai_etl2 as etl2
     num_examples, train_iter = etl2.dataset(patch_size=FLAGS.patch_size,
                                             stride=FLAGS.stride,
@@ -221,27 +215,38 @@ def single_gpu_train():
     net = resnet.inference(xplaceholder, FLAGS.architecture)
     logits = final_layer_types[FLAGS.label_f](net)
     loss = resnet.loss(logits, yplaceholder)
-    train_step = optimizer.minimize(loss) # TODO global step
+    global_step = tf.get_variable(
+        'global_step', [],
+        initializer=tf.constant_initializer(0), trainable=False)
+    train_step = optimizer.minimize(loss, global_step=global_step)
     top_k_op = tf.nn.in_top_k(logits, yplaceholder, 1)
+
 
     sess = tf.Session()
     init = tf.initialize_all_variables()
+    saver = tf.train.Saver()
     sess.run(init)
+    resume(sess, saver)
 
-    iter_num = 0
     it = train_iter()
-    while True:
+    for iter_num in xrange(FLAGS.num_epochs * num_examples):
         xbatch, ybatch = next(it)
+
+        start_time = time.time()
         _, batch_loss, topk, preds = sess.run([train_step, loss, top_k_op, logits], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
-        batch_acc = np.average(topk)
-        print(batch_loss, batch_acc)
+        duration = time.time() - start_time
+        
+        train_acc = np.average(topk)
+        log['train_accs'].append((iter_num, str(train_acc)))
+        print('iter: %d train acc: %0.2f examples/sec: %0.2f'
+            %(iter_num, train_acc, FLAGS.batch_size / duration))
+        save_log(log)
 
-        iter_num+=1
-        if iter_num > FLAGS.num_epochs * num_examples:
-            break
-
-        # TODO save logs
-        # TODO save checkpoint
+        if iter_num % 1000 == 0:
+            print('saving...')
+            MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
+                                + '/' + FLAGS.experiment_name + '.checkpoint'
+            saver.save(sess, MODEL_SAVEPATH, global_step=global_step)
 
     sess.close()
 
@@ -299,7 +304,7 @@ def multi_gpu_train():
 
         it = train_iter()
         num_iterations = num_examples * FLAGS.num_epochs / FLAGS.batch_size
-        for iter in range(num_iterations):
+        for iter in xrange(num_iterations):
             lr = learning_rate_schedule(iter, num_iterations)
             feed_dict = {learning_rate: lr}
             for gpu_i in range(FLAGS.num_gpus):
