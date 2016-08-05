@@ -25,3 +25,5 @@ Software
 Upgrade TF version.
 
 Am I using cudnn??
+
+Implement validation functions in a separate file like a la `cifar10_eval.py`.
