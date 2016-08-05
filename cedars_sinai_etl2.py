@@ -78,7 +78,9 @@ def dataset(patch_size, stride, batch_size, label_f):
             xbatch, ybatch = [], []
             for _ in range(batch_size):
                 i = random.randrange(num_examples)
-                xbatch.append(xs[i])
+                num_rot = random.choice([0,1,2,3])
+                x = np.rot90(xs[i], num_rot)
+                xbatch.append(x)
                 ybatch.append(ys[i])
 
             yield np.array(xbatch), np.array([label_f(y)[0] for y in ybatch])
