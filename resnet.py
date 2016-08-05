@@ -9,6 +9,10 @@ import tensorflow as tf
 from math import sqrt
 import numpy as np
 
+flags = tf.app.flags
+FLAGS = flags.FLAGS
+flags.DEFINE_float('weight_decay', 0.0001, '')
+
 def _get_variable(name, shape, weight_decay=None):
     '''
     The weight decay parameter gives the scaling constant for the
@@ -25,12 +29,12 @@ def _get_variable(name, shape, weight_decay=None):
 # TODO `activation` param is currently unused. Linter??
 def fully_connected(x, outdim, activation=tf.nn.relu):
     indim = x.get_shape()[-1].value
-    weights = _get_variable('weights', [indim, outdim], weight_decay=0.0001)
+    weights = _get_variable('weights', [indim, outdim], weight_decay=FLAGS.weight_decay)
     biases = tf.get_variable('biases', [outdim], initializer=tf.constant_initializer(0.0))
     return tf.matmul(x, weights) + biases
 
 def _conv2d(x, filter_shape, num_channels, stride):
-    weights = _get_variable('weights', filter_shape + [x.get_shape()[-1].value, num_channels], weight_decay=0.0001)
+    weights = _get_variable('weights', filter_shape + [x.get_shape()[-1].value, num_channels], weight_decay=FLAGS.weight_decay)
     conv = tf.nn.conv2d(x, weights, stride, padding='SAME')
     mean, variance = tf.nn.moments(conv, axes=[0,1,2])
     batch_norm = tf.nn.batch_normalization(conv, mean, variance,

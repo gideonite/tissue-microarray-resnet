@@ -71,6 +71,7 @@ def maybe_load_logfile(path=LOG_PATH):
                'stride': FLAGS.stride}
 
         save_log(log)
+        json.dump(log, sys.stdout, indent=2)
 
     return log
 
@@ -204,34 +205,43 @@ def single_gpu_train():
     xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels), name='xplaceholder')
     yplaceholder = tf.placeholder(tf.int64, shape=(None), name='yplaceholder')
     
-    num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
-                                                    patch_size=FLAGS.patch_size,
-                                                    stride=FLAGS.stride,
-                                                    batch_size=FLAGS.batch_size,
-                                                    frac_data=FLAGS.frac_data,
-                                                    label_f=label_functions[FLAGS.label_f])
+    # num_examples, train_iter, xval, yval = etl.dataset(path=FLAGS.cache_basepath,
+    #                                                 patch_size=FLAGS.patch_size,
+    #                                                 stride=FLAGS.stride,
+    #                                                 batch_size=FLAGS.batch_size,
+    #                                                 frac_data=FLAGS.frac_data,
+    #                                                 label_f=label_functions[FLAGS.label_f])
 
-    # import cedars_sinai_etl2 as etl2
-    # train_iter = etl2.minidata(patch_size=FLAGS.patch_size, stride=FLAGS.stride, batch_size=FLAGS.batch_size, label_f=etl2.center_pixel)
+    import cedars_sinai_etl2 as etl2
+    num_examples, train_iter = etl2.dataset(patch_size=FLAGS.patch_size,
+                                            stride=FLAGS.stride,
+                                            batch_size=FLAGS.batch_size,
+                                            label_f=etl2.center_pixel)
 
     net = resnet.inference(xplaceholder, FLAGS.architecture)
     logits = final_layer_types[FLAGS.label_f](net)
     loss = resnet.loss(logits, yplaceholder)
-
     train_step = optimizer.minimize(loss) # TODO global step
-
     top_k_op = tf.nn.in_top_k(logits, yplaceholder, 1)
 
     sess = tf.Session()
     init = tf.initialize_all_variables()
     sess.run(init)
 
+    iter_num = 0
     it = train_iter()
     while True:
         xbatch, ybatch = next(it)
         _, batch_loss, topk, preds = sess.run([train_step, loss, top_k_op, logits], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
         batch_acc = np.average(topk)
         print(batch_loss, batch_acc)
+
+        iter_num+=1
+        if iter_num > FLAGS.num_epochs * num_examples:
+            break
+
+        # TODO save logs
+        # TODO save checkpoint
 
     sess.close()
 

@@ -46,14 +46,52 @@ def center_pixel(patch):
     length, height = patch.shape[:2]
     return np.array([patch[length/2, height/2]-1]) # labels are 0-indexed.
 
-def dataset(patch_size, stride, batch_size, label_f):
+def _patches(img, patch_size, stride):
+    assert 2 <= len(img.shape) <= 3
+    num_xpatches = int((img.shape[0]-patch_size+1) / stride)
+    num_ypatches = int((img.shape[1]-patch_size+1) / stride)
+
+    #blah
+    ret = []
+    for x in range(0, img.shape[0]-patch_size+1, stride):
+        for y in range(0, img.shape[1]-patch_size+1, stride):
+            ret.append(img[x : x+patch_size, y : y+patch_size])
+    return ret
+
+def _load(patch_size, stride, batch_size, label_f):
     train_data = [(imread(ex_num), labelread(ex_num)) for ex_num in trainset]
-    # setup possible patch coordinates
-    for i in range(batch_size):
-        x,y = random.choice(train_data)
 
-        # select randomly from the patch coordinates and index into the images
-        # append to batch
-        # yield xbatch, ybatch
+    xs, ys = zip(*[(_patches(x, patch_size, stride), _patches(y, patch_size, stride)) for x,y in train_data])
+    xs = [x for sublist in xs for x in sublist]
+    ys = [y for sublist in ys for y in sublist]
 
-dataset(64, 15, 64, center_pixel)
+    num_examples = len(xs)
+    assert len(xs) == len(ys)
+
+    return xs, ys
+
+def dataset(patch_size, stride, batch_size, label_f):
+    xs, ys = _load(patch_size, stride, batch_size, label_f)
+    num_examples = len(xs)
+    def iter():
+        while True:
+            xbatch, ybatch = [], []
+            for _ in range(batch_size):
+                i = random.randrange(num_examples)
+                xbatch.append(xs[i])
+                ybatch.append(ys[i])
+
+            yield np.array(xbatch), np.array([label_f(y)[0] for y in ybatch])
+
+    return num_examples, iter
+
+def minidata(patch_size, stride, batch_size, label_f):
+    xs, ys = _load(patch_size, stride, batch_size, label_f)
+    xpatch = xs[42]
+    ypatch = ys[42]
+
+    def iter():
+        while True:
+            yield np.array([xpatch for i in range(batch_size)]), np.squeeze(np.array([label_f(ypatch) for i in range(batch_size)]))
+
+    return 1, iter
