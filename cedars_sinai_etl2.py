@@ -7,9 +7,6 @@ import random
 import tensorflow as tf
 import scipy.io as sio
 
-# img_filename = "/mnt/data/TIFF color normalized sequential filenames/test%s.tif"
-# label_filename = "/mnt/data/ATmask sequential filenames/test%s_Mask.mat"
-
 def read_list_of_numbers_or_fail(filename):
     with open(filename) as f:
         return [int(l.strip()) for l in f.readlines()]
@@ -71,6 +68,11 @@ def _load(patch_size, stride, batch_size, label_f):
     return xs, ys
 
 def dataset(patch_size, stride, batch_size, label_f):
+    '''
+    Returns a tuple (number of examples, iterator). The iterator
+    returns batches forever of randomly transformed (rotated, etc)
+    pairs of (xs, ys) of the specified batch size.
+    '''
     xs, ys = _load(patch_size, stride, batch_size, label_f)
     num_examples = len(xs)
     def iter():
@@ -88,6 +90,9 @@ def dataset(patch_size, stride, batch_size, label_f):
     return num_examples, iter
 
 def minidata(patch_size, stride, batch_size, label_f):
+    '''
+    Dataset of size 1 for testing.
+    '''
     xs, ys = _load(patch_size, stride, batch_size, label_f)
     xpatch = xs[42]
     ypatch = ys[42]
