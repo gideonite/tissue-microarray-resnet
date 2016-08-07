@@ -24,9 +24,6 @@ RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
     python get-pip.py && \
     rm get-pip.py
 
-# install Tensorflow
-ENV TENSORFLOW_VERSION 0.10.0
-RUN pip install --upgrade https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-${TENSORFLOW_VERSION}rc0-cp27-none-linux_x86_64.whl
 
 # TensorBoard
 EXPOSE 6006
@@ -38,6 +35,10 @@ RUN pip --no-cache-dir install scikit-learn \
     h5py \
     ipykernel \
     jupyter 
+
+# install Tensorflow
+ENV TENSORFLOW_VERSION 0.8.0
+RUN pip install --upgrade https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-${TENSORFLOW_VERSION}rc0-cp27-none-linux_x86_64.whl
 
 # default command to be run by `docker run`
 CMD ["/bin/bash"]
