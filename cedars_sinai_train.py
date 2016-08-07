@@ -247,13 +247,13 @@ def single_gpu_train():
         log['train_accs'].append((iter_num, str(train_acc)))
         print('iter: %d train acc: %0.2f examples/sec: %0.2f'
             %(iter_num, train_acc, FLAGS.batch_size / duration))
-        save_log(log)
 
         if iter_num % 1000 == 0:
             print('saving...')
             MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
                                 + '/' + FLAGS.experiment_name + '.checkpoint'
             saver.save(sess, MODEL_SAVEPATH, global_step=global_step)
+            save_log(log)
 
     sess.close()
 
