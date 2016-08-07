@@ -67,21 +67,34 @@ def _load(patch_size, stride, batch_size, label_f):
 
     return xs, ys
 
-def dataset(patch_size, stride, batch_size, label_f):
+def dataset(patch_size, stride, batch_size, augmentations=[], label_f=center_pixel):
     '''
     Returns a tuple (number of examples, iterator). The iterator
     returns batches forever of randomly transformed (rotated, etc)
     pairs of (xs, ys) of the specified batch size.
+    
+    augment is a list of one or more of ['rotation', 'flip']
     '''
     xs, ys = _load(patch_size, stride, batch_size, label_f)
     num_examples = len(xs)
+
+    augment_funcs = {
+        'rotation': lambda x: np.rot90(x, np.random.choice([0,1,2,3])),
+        'flip': lambda x: np.fliplr(x) if np.random.random() > 0.5 else np.flipud(x)
+    }
+
+    augmentations = [augment_funcs[a] for a in augmentations]
+
     def iter():
         while True:
             xbatch, ybatch = [], []
             for _ in range(batch_size):
                 i = random.randrange(num_examples)
-                num_rot = random.choice([0,1,2,3])
-                x = np.rot90(xs[i], num_rot)
+
+                x = xs[i]
+                for aug in augmentations:
+                    x = aug(x)
+
                 xbatch.append(x)
                 ybatch.append(ys[i])
 

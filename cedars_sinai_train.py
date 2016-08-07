@@ -17,6 +17,7 @@ FLAGS = flags.FLAGS
 prog_start = time.time()
 
 flags.DEFINE_string('architecture', '41_layers', '')
+flags.DEFINE_string('augmentations', '', '')
 flags.DEFINE_integer('batch_size', 128, 'Number of examples per GD batch')
 flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_boolean('resume', False, 'Resume training or clobber the stuff and start over.')
@@ -30,6 +31,7 @@ flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
 TOWER_NAME = 'tower'
 LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
+
 
 # TODO make more of these functions private
 
@@ -176,8 +178,7 @@ def learning_rate_schedule(iter, num_iterations):
 
 def resume(sess, saver):
     if FLAGS.resume:
-        MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
-                         + '/' + FLAGS.experiment_name + '.checkpoint'
+        MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name)
         latest = tf.train.latest_checkpoint(MODEL_SAVEPATH)
         if not latest:
             print "No checkpoint to continue from in", MODEL_SAVEPATH
@@ -205,12 +206,19 @@ def single_gpu_train():
     
     xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels), name='xplaceholder')
     yplaceholder = tf.placeholder(tf.int64, shape=(None), name='yplaceholder')
-    
+
     import cedars_sinai_etl2 as etl2
+
+    if FLAGS.augmentations == '':
+        augmentations = []
+    else:
+        augmentations = [aug.strip() for aug in FLAGS.augmentations.split(',')]
+    
     num_examples, train_iter = etl2.dataset(patch_size=FLAGS.patch_size,
                                             stride=FLAGS.stride,
                                             batch_size=FLAGS.batch_size,
-                                            label_f=etl2.center_pixel)
+                                            label_f=etl2.center_pixel,
+                                            augmentations=augmentations)
 
     net = resnet.inference(xplaceholder, FLAGS.architecture)
     logits = final_layer_types[FLAGS.label_f](net)
@@ -230,9 +238,8 @@ def single_gpu_train():
 
     it = train_iter()
     for iter_num in xrange(FLAGS.num_epochs * num_examples):
-        xbatch, ybatch = next(it)
-
         start_time = time.time()
+        xbatch, ybatch = next(it)
         _, batch_loss, topk, preds = sess.run([train_step, loss, top_k_op, logits], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
         duration = time.time() - start_time
         
