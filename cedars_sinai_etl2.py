@@ -102,7 +102,7 @@ def dataset(patch_size, stride, batch_size, augmentations=[], label_f=center_pix
 
     return num_examples, iter
 
-def minidata(patch_size, stride, batch_size, label_f):
+def minidata(patch_size, stride, batch_size, augmentations, label_f):
     '''
     Dataset of size 1 for testing.
     '''
