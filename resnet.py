@@ -135,55 +135,6 @@ def inference(xplaceholder, arch_or_groups):
     net = tf.nn.avg_pool(net, ksize=[1, net_shape[1], net_shape[2], 1],
                    strides=[1, 1, 1, 1], padding='VALID')
     return _flatten(net)
-        
-
-# def inference(xplaceholder, arch_or_groups):
-#     '''
-#     Builds the model.
-#     '''
-
-#     if type(arch_or_groups) == str:
-#         groups = _get_architecture_or_fail(arch_or_groups)
-#     elif type(arch_or_groups) == list:
-#         groups = arch_or_groups
-#     else:
-#         raise TypeError(arch_or_groups, type(arch_or_groups))
-
-#     # First convolution expands to 64 channels
-#     with tf.variable_scope('first_conv_expand_layer'):
-#         net = _conv2d(xplaceholder, [7, 7], 64, [1, 1, 1, 1])
-#     net = tf.nn.max_pool(
-#         net, [1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-
-#     with tf.variable_scope("group_0/block_0/conv_upscale"):
-#         net = _conv2d(net, [1, 1], groups[0].num_filters, [1,1,1,1])
-
-#     for group_i, group in enumerate(groups):
-#         for block_i in range(group.num_blocks):
-#             name = 'group_%d/block_%d' % (group_i, block_i)
-
-#             with tf.variable_scope(name + '/conv_in'):
-#                 conv = _conv2d(net, [1, 1], group.bottleneck_size, [1, 1, 1, 1])
-                
-#             with tf.variable_scope(name + '/conv_bottleneck'):
-#                 conv = _conv2d(conv, [3, 3], group.bottleneck_size, [1, 1, 1, 1])
-
-#             with tf.variable_scope(name + '/conv_out'):
-#                 conv = _conv2d(conv, [1, 1], group.num_filters, [1, 1, 1, 1])
-
-#             net = conv + net
-
-#         try:
-#             next_group = groups[group_i+1]
-#             with tf.variable_scope('group_%d/conv_upscale' % group_i):
-#                 net = _conv2d(net, [1, 1], next_group.num_filters, [1, 1, 1, 1])
-#         except IndexError:
-#             pass
-
-#     net_shape = net.get_shape().as_list()
-#     net = tf.nn.avg_pool(net, ksize=[1, net_shape[1], net_shape[2], 1],
-#                    strides=[1, 1, 1, 1], padding='VALID')
-#     return _flatten(net)
 
 architectures = { '10_layers_bn': [BottleneckGroup(3,128,32)],
                   '41_layers_bn': [BottleneckGroup(3, 128, 32),
@@ -194,6 +145,7 @@ architectures = { '10_layers_bn': [BottleneckGroup(3,128,32)],
                                    BottleneckGroup(4, 128, 512),
                                    BottleneckGroup(6, 256, 1024),
                                    BottleneckGroup(3, 512, 2048)],
+                  '6_layers_couple': [CoupleGroup(2, 64)],
                   '18_layers_couple': [CoupleGroup(2, 64),
                                        CoupleGroup(2, 128),
                                        CoupleGroup(2, 256),
@@ -207,38 +159,3 @@ def loss(logits, labels):
     tf.add_to_collection('losses', cross_entropy_mean)
 
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
-
-def train_ops(xplaceholder,
-              yplaceholder,
-              architecture,
-              num_classes):
-    '''
-    Returns the TF ops that you can use during training.
-    '''
-
-    arch = _get_architecture_or_fail(architecture)
-
-    net = inference(xplaceholder, arch)
-    preds = fully_connected(net, num_classes)
-
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, yplaceholder, name='crossentropy')
-    avg_cross_entropy = tf.reduce_mean(cross_entropy)
-    regularization = tf.get_collection('regularized_losses')
-    if regularization:
-        regularization = tf.add_n(regularization)
-        loss = tf.add(avg_cross_entropy, regularization)
-    else:
-        loss = avg_cross_entropy
-
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-
-    learning_rate = tf.placeholder(tf.float32, shape=[], name='learning_rate')
-
-    train_op = tf.train.MomentumOptimizer(learning_rate=learning_rate,
-                                          momentum=0.9)
-    train_op = train_op.minimize(loss, global_step=global_step)
-    
-    accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(preds,1),
-                                               yplaceholder), tf.float32))
-
-    return global_step, train_op, learning_rate, preds, loss, accuracy
