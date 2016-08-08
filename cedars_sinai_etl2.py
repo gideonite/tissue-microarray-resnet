@@ -7,6 +7,12 @@ import random
 import tensorflow as tf
 import scipy.io as sio
 
+flags = tf.app.flags
+FLAGS = flags.FLAGS
+flags.DEFINE_float('frac_data', 1.0, 'Fraction of training data to use')
+flags.DEFINE_integer('patch_size', 128, 'Size of square patches to extract from images')
+flags.DEFINE_integer('stride', 15, 'Stride between patches')
+
 def read_list_of_numbers_or_fail(filename):
     with open(filename) as f:
         return [int(l.strip()) for l in f.readlines()]

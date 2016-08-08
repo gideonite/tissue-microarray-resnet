@@ -7,6 +7,8 @@ import time
 import sys
 
 import cedars_sinai_etl as etl
+import cedars_sinai_etl2 as etl2
+
 import resnet
 import numpy as np
 
@@ -31,7 +33,6 @@ flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
 TOWER_NAME = 'tower'
 LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
-
 
 # TODO make more of these functions private
 
@@ -206,8 +207,6 @@ def single_gpu_train():
     
     xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels), name='xplaceholder')
     yplaceholder = tf.placeholder(tf.int64, shape=(None), name='yplaceholder')
-
-    import cedars_sinai_etl2 as etl2
 
     if FLAGS.augmentations == '':
         augmentations = []
