@@ -8,8 +8,8 @@ import resnet
 import sklearn.metrics
 import json
 
-# basedir = "/home/gideon/Data/cedars-sinai/"
-basedir = "/mnt/data/"
+basedir = "/home/gideon/Data/cedars-sinai/"
+# basedir = "/mnt/data/"
 img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
 raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
 png_label_filename = basedir + "ATmask sequential filenames png/test%d_Mask.png"
@@ -148,3 +148,31 @@ if __name__ == '__main__':
     #     filename = os.path.expandvars(filename)
     #     plot_train_val_accs(filename, title=title, output_filename=output_filename)
     pass
+
+# sample_num = 10
+
+# import matplotlib.pyplot as plt
+# import matplotlib.image as mpimg
+# import numpy as np
+
+# import scipy.io as sio
+# raw_img = cv2.imread(img_filename %(sample_num))
+# labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+
+# plt.figure(1)
+
+# plt.subplot(131)
+# imgplot = plt.imshow(raw_img)
+
+# plt.subplot(132)
+# imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
+
+
+# plt.subplot(133)
+# # imgplot = plt.imshow(raw_img)
+# plt.bar([1,2,3,4], np.bincount(labels.flatten())[1:] / sum(np.bincount(labels.flatten())), color='black')
+# plt.show()
+
+# # cv2.imshow('foobar', raw_img)
+# # cv2.waitKey(0)
+# # cv2.destroyAllWindows()
