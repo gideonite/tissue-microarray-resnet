@@ -1,23 +1,269 @@
-#+BEGIN_SRC python :session :exports none
+#+BEGIN_SRC ipython :session :exports none
+%matplotlib inline
 import matplotlib, numpy
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import scipy.io as sio
+import cv2
+import numpy as np
+import pandas as pd
+import sklearn.metrics
+import json
+matplotlib.style.use('ggplot')
+basedir = "/home/gideon/Data/cedars-sinai/"
+img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
+raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
+with_annotations_filename = basedir + "Color annotation sequential filenames/test%d_Annotated.tif"
+num_samples = 224
 #+END_SRC
 
 #+RESULTS:
 
-#+begin_src python :session :results file :exports results
-import matplotlib, numpy
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-fig=plt.figure(figsize=(4,2))
-x=numpy.linspace(-15,15)
-plt.plot(numpy.sin(x)/x)
-fig.tight_layout()
-plt.savefig('/tmp/python-matplot-fig.png')
-'/tmp/python-matplot-fig.png' # return filename to org-mode
+# #+begin_src ipython :session :results file :exports results
+# fig=plt.figure(figsize=(4,2))
+# x=numpy.linspace(-15,15)
+# plt.plot(numpy.sin(x)/x)
+# fig.tight_layout()
+# plt.savefig('/tmp/ipython-matplot-fig.png')
+# '/tmp/ipython-matplot-fig.png' # return filename to org-mode
+# #+end_src
+
+# #+RESULTS:
+# [[file:/tmp/ipython-matplot-fig.png]]
+
+
+# #+BEGIN_SRC ipython :session :results file :exports results
+# sample_num = 10
+# basedir = "/home/gideon/Data/cedars-sinai/"
+# img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
+# raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
+# with_annotations_filename = basedir + "Color annotation sequential filenames/test%d_Annotated.tif"
+
+# raw_img = cv2.imread(img_filename %(sample_num))
+# assert img != None
+# labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+
+# plt.figure(1)
+
+# plt.subplot(131)
+# imgplot = plt.imshow(raw_img)
+
+# plt.subplot(132)
+# imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
+# assert imgplt != None
+
+# plt.subplot(133)
+# plt.bar([1,2,3,4], np.bincount(labels.flatten())[1:] / sum(np.bincount(labels.flatten())), color='black')
+# # plt.show()
+
+# plt.savefig('/tmp/foobar.png')
+# '/tmp/foobar.png'
+# #+END_SRC
+
+# #+RESULTS:
+# [[file:/tmp/foobar.png]]
+
+#+BEGIN_SRC ipython :session :file /tmp/labelcounts.png :exports results
+with open('train.txt') as exs:
+    xtr = [int(x.strip()) for x in exs]
+
+idx2tumor_grade = ['stroma', 'high grade', 'benign/normal', 'low grade']
+
+counts = []
+for sample_num in xtr:
+    labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+    labels = labels.flatten()
+    label_counts = np.bincount(labels)[1:]
+    label_counts = np.append(label_counts, np.array([0] * (4 - len(label_counts))))
+    label_counts = label_counts / float(len(labels))
+    counts.append(label_counts)
+
+counts = np.array(counts)
+
+df = pd.DataFrame(counts)
+df.columns=[idx2tumor_grade]
+
+plt.figure()
+plt.suptitle('Label Counts')
+plt.subplot(121)
+
+plt.title('Training')
+plt.ylabel('counts')
+df.sum().plot(kind='bar'); plt.axhline(0, color='k')
+
+with open('validation.txt') as exs:
+    xval = [int(x.strip()) for x in exs]
+
+idx2tumor_grade = ['stroma', 'high', 'benign/normal', 'low']
+
+counts = []
+for sample_num in xval:
+    labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+    labels = labels.flatten()
+    label_counts = np.bincount(labels)[1:]
+    label_counts = np.append(label_counts, np.array([0] * (4 - len(label_counts))))
+    label_counts = label_counts / float(len(labels))
+    counts.append(label_counts)
+
+counts = np.array(counts)
+
+df = pd.DataFrame(counts)
+df.columns=[idx2tumor_grade]
+
+plt.subplot(122)
+
+plt.title('Validation')
+df.sum().plot(kind='bar'); plt.axhline(0, color='k')
+#+end_src
+
+#+begin_src ipython :session :exports results
+  jpl_basedir = '/home/gideon/Data/jpl-cedars-sinai-results/'
+  with open('test.txt') as exs:
+      xte = [int(x.strip()) for x in exs]
+
+  ypreds = []
+  ytrue = []
+  for sample_num in xte:
+      true_labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+      jpl_results = cv2.imread(jpl_basedir + 'output_masks/test%d_Mask.png' % sample_num)
+      assert jpl_results != None
+      assert np.array_equal(jpl_results[:,:,0], jpl_results[:,:,1])
+      assert np.array_equal(jpl_results[:,:,1], jpl_results[:,:,2])
+      print(jpl_results)
+      jpl_results = jpl_results[:,:,0]
+      jpl_results[jpl_results == 60] = 4
+      jpl_results[jpl_results == 120] = 2
+      jpl_results[jpl_results == 180] = 3
+      jpl_results[jpl_results == 240] = 1
+# | 1 | Y | stroma        |
+# | 2 | R | high grade    |
+# | 3 | B | benign/normal |
+# | 4 | G | low grade     |
+
+      ypreds.append(jpl_results.flatten())
+      ytrue.append(true_labels.flatten())
 #+end_src
 
 #+RESULTS:
-[[file:/tmp/python-matplot-fig.png]]
 
+#+BEGIN_SRC ipython :session :exports none
+    try:
+        cm
+    except NameError:
+        cm = sklearn.metrics.confusion_matrix(np.array(ytrue).flatten(),
+                                              np.array(ypreds).flatten())
+#+END_SRC
+
+#+begin_src ipython :session :file /tmp/jpl_confusion.png :exports results
+cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+title = 'Confusion Matrix for JPL Results'
+plt.imshow(cm_normalized, interpolation='nearest', cmap=plt.cm.Blues)
+plt.title(title)
+plt.colorbar()
+tick_marks = np.arange(4)
+plt.xticks(tick_marks, idx2tumor_grade, rotation=45)
+plt.yticks(tick_marks, idx2tumor_grade)
+plt.tight_layout()
+plt.ylabel('True label')
+plt.xlabel('Predicted label')
+#+end_src
+
+#+RESULTS:
+[[file:/tmp/foobar.png]]
+
+#+begin_src ipython :session :file /tmp/te13.png :exports results
+  sample_num = 13
+  basedir = "/home/gideon/Data/cedars-sinai/"
+  img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
+  raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
+  with_annotations_filename = basedir + "Color annotation sequential filenames/test%d_Annotated.tif"
+
+  raw_img = cv2.imread(img_filename %(sample_num))
+  assert raw_img != None
+  labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+
+  plt.figure()
+  plt.suptitle('Test Ex: ' + str(sample_num))
+
+  num_subplots = 3
+
+  plt.subplot(1,num_subplots,1)
+  imgplot = plt.imshow(raw_img)
+  plt.gca().set_xticklabels([])
+  plt.title('Input image')
+
+  ax = plt.subplot(1,num_subplots,2)
+  imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
+  assert imgplot != None
+  plt.gca().set_xticklabels([])
+  plt.gca().set_yticklabels([])
+  plt.title('Pathologist Label')
+
+  plt.subplot(1,num_subplots,3)
+  imgplot = plt.imshow(
+      cv2.imread(jpl_basedir + 'output_masks/test%d_Mask.png' % sample_num))
+  plt.gca().set_xticklabels([])
+  plt.gca().set_yticklabels([])
+  plt.title('JPL prediction')
+#+end_src
+
+#+begin_src ipython :session :file /tmp/aug_lr_curves.png :exports results
+  augmentation_experiments = ['rotation.json',  'flip.json', 'no_augmentation.json', 'flip_rot.json']
+  experiment_basedir = '/tmp/'
+
+  train_accs = []
+  for expfilename in augmentation_experiments:
+      with open(experiment_basedir + expfilename) as json_data:
+          experiment = json.load(json_data)
+          train_accs.append(experiment['train_accs'])
+
+  shortest = min([len(l) for l in train_accs])
+  train_accs = [l[:shortest] for l in train_accs]
+
+  foo = []
+  for l in train_accs:
+      asdf = []
+      for x,y in l:
+          asdf.append(float(y))
+      foo.append(asdf)
+
+  augexpersdf = pd.DataFrame(np.array(foo).transpose(), columns = ['rotation', 'flip', 'no augmentation', 'flip and rotation'])
+  pd.ewma(augexpersdf, halflife=0.9999).plot()
+
+  plt.title('Training Curves for Data Augmentation')
+  plt.xlabel('Iteration')
+  plt.ylabel('Accuracy')
+#+end_src
+
+#+BEGIN_SRC ipython :session
+  depth_experiments = ['6layers_couple.json', '18_layers_couple.json', '5layers_couple.json']
+  experiment_basedir = '/tmp/'
+
+  train_accs = []
+  for depth_expr in depth_experiments:
+      with open(experiment_basedir + expfilename) as json_data:
+          experiment = json.load(json_data)
+          train_accs.append(experiment['train_accs'])
+
+  shortest = min([len(l) for l in train_accs])
+  train_accs = [l[:shortest] for l in train_accs]
+
+  foo = []
+  for l in train_accs:
+      asdf = []
+      for x,y in l:
+          asdf.append(float(y))
+      foo.append(asdf)
+
+  depthexprdf = pd.DataFrame(np.array(foo).transpose(), columns = ['rotation', 'flip', 'no augmentation', 'flip and rotation'])
+  pd.ewma(depthexprdf, halflife=0.9999).plot()
+
+  plt.title('Training Curves for Data Augmentation')
+  plt.xlabel('Iteration')
+  plt.ylabel('Accuracy')
+#+END_SRC
+
+*** TODO training curves for different sized models.
+*** TODO cedars_sinai_eval.py
+*** TODO confusion matrix for all models
