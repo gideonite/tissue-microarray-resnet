@@ -1,1 +1,0 @@
-/cbio/grlab/home/dresdnerg/scripts/docker_run_gpu.sh
