@@ -228,7 +228,6 @@ def single_gpu_train():
     train_step = optimizer.minimize(loss, global_step=global_step)
     top_k_op = tf.nn.in_top_k(logits, yplaceholder, 1)
 
-
     sess = tf.Session()
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
@@ -247,7 +246,7 @@ def single_gpu_train():
         print('iter: %d train acc: %0.2f examples/sec: %0.2f'
             %(iter_num, train_acc, FLAGS.batch_size / duration))
 
-        if iter_num % 1000 == 0:
+        if iter_num % 100 == 0:
             print('saving...')
             MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name) \
                                 + '/' + FLAGS.experiment_name + '.checkpoint'
