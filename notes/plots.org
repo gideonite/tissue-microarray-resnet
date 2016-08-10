@@ -67,7 +67,7 @@ num_samples = 224
 with open('train.txt') as exs:
     xtr = [int(x.strip()) for x in exs]
 
-idx2tumor_grade = ['stroma', 'high grade', 'benign/normal', 'low grade']
+idx2tumor_grade = ['stroma', 'high grade', 'glands', 'low grade']
 
 counts = []
 for sample_num in xtr:
@@ -94,8 +94,6 @@ df.sum().plot(kind='bar'); plt.axhline(0, color='k')
 with open('validation.txt') as exs:
     xval = [int(x.strip()) for x in exs]
 
-idx2tumor_grade = ['stroma', 'high', 'benign/normal', 'low']
-
 counts = []
 for sample_num in xval:
     labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
@@ -116,32 +114,35 @@ plt.title('Validation')
 df.sum().plot(kind='bar'); plt.axhline(0, color='k')
 #+end_src
 
+#+RESULTS:
+[[file:/tmp/labelcounts.png]]
+
 #+begin_src ipython :session :exports results
-  jpl_basedir = '/home/gideon/Data/jpl-cedars-sinai-results/'
-  with open('test.txt') as exs:
-      xte = [int(x.strip()) for x in exs]
+    jpl_basedir = '/home/gideon/Data/jpl-cedars-sinai-results/'
+    with open('test.txt') as exs:
+        xte = [int(x.strip()) for x in exs]
 
-  ypreds = []
-  ytrue = []
-  for sample_num in xte:
-      true_labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
-      jpl_results = cv2.imread(jpl_basedir + 'output_masks/test%d_Mask.png' % sample_num)
-      assert jpl_results != None
-      assert np.array_equal(jpl_results[:,:,0], jpl_results[:,:,1])
-      assert np.array_equal(jpl_results[:,:,1], jpl_results[:,:,2])
-      print(jpl_results)
-      jpl_results = jpl_results[:,:,0]
-      jpl_results[jpl_results == 60] = 4
-      jpl_results[jpl_results == 120] = 2
-      jpl_results[jpl_results == 180] = 3
-      jpl_results[jpl_results == 240] = 1
-# | 1 | Y | stroma        |
-# | 2 | R | high grade    |
-# | 3 | B | benign/normal |
-# | 4 | G | low grade     |
+    ypreds = []
+    ytrue = []
+    for sample_num in xte:
+        true_labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+        jpl_results = cv2.imread(jpl_basedir + 'output_masks/test%d_Mask.png' % sample_num)
+        assert jpl_results != None
+        assert np.array_equal(jpl_results[:,:,0], jpl_results[:,:,1])
+        assert np.array_equal(jpl_results[:,:,1], jpl_results[:,:,2])
 
-      ypreds.append(jpl_results.flatten())
-      ytrue.append(true_labels.flatten())
+        jpl_results = jpl_results[:,:,0]
+        jpl_results[jpl_results == 60] = 3
+        jpl_results[jpl_results == 120] = 4
+        jpl_results[jpl_results == 180] = 2
+        jpl_results[jpl_results == 240] = 1
+  # | 1 | Y | stroma               |
+  # | 2 | R | high grade           |
+  # | 3 | B | benign/normal glands |
+  # | 4 | G | low grade            |
+
+        ypreds.append(jpl_results.flatten())
+        ytrue.append(true_labels.flatten())
 #+end_src
 
 #+RESULTS:
@@ -153,6 +154,8 @@ df.sum().plot(kind='bar'); plt.axhline(0, color='k')
         cm = sklearn.metrics.confusion_matrix(np.array(ytrue).flatten(),
                                               np.array(ypreds).flatten())
 #+END_SRC
+
+#+RESULTS:
 
 #+begin_src ipython :session :file /tmp/jpl_confusion.png :exports results
 cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -170,7 +173,7 @@ plt.xlabel('Predicted label')
 #+end_src
 
 #+RESULTS:
-[[file:/tmp/foobar.png]]
+[[file:/tmp/jpl_confusion.png]]
 
 #+begin_src ipython :session :file /tmp/te13.png :exports results
   sample_num = 13
@@ -208,6 +211,9 @@ plt.xlabel('Predicted label')
   plt.title('JPL prediction')
 #+end_src
 
+#+RESULTS:
+[[file:/tmp/te13.png]]
+
 #+begin_src ipython :session :file /tmp/aug_lr_curves.png :exports results
   augmentation_experiments = ['rotation.json',  'flip.json', 'no_augmentation.json', 'flip_rot.json']
   experiment_basedir = '/tmp/'
@@ -234,15 +240,19 @@ plt.xlabel('Predicted label')
   plt.title('Training Curves for Data Augmentation')
   plt.xlabel('Iteration')
   plt.ylabel('Accuracy')
+  plt.ylim([0, 1])
 #+end_src
 
-#+BEGIN_SRC ipython :session
-  depth_experiments = ['6layers_couple.json', '18_layers_couple.json', '5layers_couple.json']
+#+RESULTS:
+[[file:/tmp/aug_lr_curves.png]]
+
+#+BEGIN_SRC ipython :session :file /tmp/depth_lr_curves.png :exports results
+  depth_experiments = ['4layers_couple.json', '6layers_couple.json', '18_layers_couple.json']
   experiment_basedir = '/tmp/'
 
   train_accs = []
   for depth_expr in depth_experiments:
-      with open(experiment_basedir + expfilename) as json_data:
+      with open(experiment_basedir + depth_expr) as json_data:
           experiment = json.load(json_data)
           train_accs.append(experiment['train_accs'])
 
@@ -256,14 +266,17 @@ plt.xlabel('Predicted label')
           asdf.append(float(y))
       foo.append(asdf)
 
-  depthexprdf = pd.DataFrame(np.array(foo).transpose(), columns = ['rotation', 'flip', 'no augmentation', 'flip and rotation'])
+  depthexprdf = pd.DataFrame(np.array(foo).transpose(), columns=['4layers', '6 layers', '18 layers'])
   pd.ewma(depthexprdf, halflife=0.9999).plot()
 
-  plt.title('Training Curves for Data Augmentation')
+  plt.title('Training Curves for Networks of Different Depths')
   plt.xlabel('Iteration')
   plt.ylabel('Accuracy')
+  plt.ylim([0, 1])
 #+END_SRC
 
-*** TODO training curves for different sized models.
+#+RESULTS:
+[[file:/tmp/depth_lr_curves.png]]
+
 *** TODO cedars_sinai_eval.py
 *** TODO confusion matrix for all models
