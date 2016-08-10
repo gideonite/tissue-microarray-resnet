@@ -279,4 +279,4 @@ plt.xlabel('Predicted label')
 [[file:/tmp/depth_lr_curves.png]]
 
 *** TODO cedars_sinai_eval.py
-*** TODO confusion matrix for all models
+*** TODO confusion matrix for all models. Might not have time for this.
