@@ -17,10 +17,6 @@ label_filename = "/mnt/data/ATmask sequential filenames/test%d_Mask.mat"
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_float('frac_data', 1.0, 'Fraction of training data to use')
-flags.DEFINE_integer('patch_size', 64, 'Size of square patches to extract from images')
-flags.DEFINE_integer('stride', 32, 'Stride between patches')
-
 def imread(filename):
     '''
     For some reason cv2 doesn't throw an error when it doesn't find
