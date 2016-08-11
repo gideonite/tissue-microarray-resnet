@@ -12,7 +12,6 @@ import cedars_sinai_etl2 as etl2
 import resnet
 import numpy as np
 
-
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
@@ -26,7 +25,7 @@ flags.DEFINE_boolean('resume', False, 'Resume training or clobber the stuff and 
 flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluation).')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(prog_start), '')
 flags.DEFINE_string('label_f', 'center_pixel_4labels', 'Which function to use for calculating the label for a patch')
-flags.DEFINE_string('results_basepath', '/mnt/code/notebooks/results/', '')
+flags.DEFINE_string('results_basepath', '/mnt/data/results/', '')
 flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device placement.')
 flags.DEFINE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
@@ -238,7 +237,8 @@ def single_gpu_train():
     for iter_num in xrange(FLAGS.num_epochs * num_examples):
         start_time = time.time()
         xbatch, ybatch = next(it)
-        _, batch_loss, topk, preds = sess.run([train_step, loss, top_k_op, logits], feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
+        _, batch_loss, topk, preds = sess.run([train_step, loss, top_k_op, logits],
+                                              feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
         duration = time.time() - start_time
         
         train_acc = np.average(topk)
