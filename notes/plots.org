@@ -19,55 +19,11 @@ num_samples = 224
 
 #+RESULTS:
 
-# #+begin_src ipython :session :results file :exports results
-# fig=plt.figure(figsize=(4,2))
-# x=numpy.linspace(-15,15)
-# plt.plot(numpy.sin(x)/x)
-# fig.tight_layout()
-# plt.savefig('/tmp/ipython-matplot-fig.png')
-# '/tmp/ipython-matplot-fig.png' # return filename to org-mode
-# #+end_src
-
-# #+RESULTS:
-# [[file:/tmp/ipython-matplot-fig.png]]
-
-
-# #+BEGIN_SRC ipython :session :results file :exports results
-# sample_num = 10
-# basedir = "/home/gideon/Data/cedars-sinai/"
-# img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
-# raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
-# with_annotations_filename = basedir + "Color annotation sequential filenames/test%d_Annotated.tif"
-
-# raw_img = cv2.imread(img_filename %(sample_num))
-# assert img != None
-# labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
-
-# plt.figure(1)
-
-# plt.subplot(131)
-# imgplot = plt.imshow(raw_img)
-
-# plt.subplot(132)
-# imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
-# assert imgplt != None
-
-# plt.subplot(133)
-# plt.bar([1,2,3,4], np.bincount(labels.flatten())[1:] / sum(np.bincount(labels.flatten())), color='black')
-# # plt.show()
-
-# plt.savefig('/tmp/foobar.png')
-# '/tmp/foobar.png'
-# #+END_SRC
-
-# #+RESULTS:
-# [[file:/tmp/foobar.png]]
-
 #+BEGIN_SRC ipython :session :file /tmp/labelcounts.png :exports results
 with open('train.txt') as exs:
     xtr = [int(x.strip()) for x in exs]
 
-idx2tumor_grade = ['stroma', 'high grade', 'glands', 'low grade']
+idx2tumor_grade = ['stroma', 'high grade', 'benign/normal glands', 'low grade']
 
 counts = []
 for sample_num in xtr:
@@ -83,13 +39,13 @@ counts = np.array(counts)
 df = pd.DataFrame(counts)
 df.columns=[idx2tumor_grade]
 
-plt.figure()
+plt.figure(figsize=(20,20))
 plt.suptitle('Label Counts')
 plt.subplot(121)
 
 plt.title('Training')
-plt.ylabel('counts')
-df.sum().plot(kind='bar'); plt.axhline(0, color='k')
+plt.ylabel('fraction of dataset')
+df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 
 with open('validation.txt') as exs:
     xval = [int(x.strip()) for x in exs]
@@ -111,7 +67,7 @@ df.columns=[idx2tumor_grade]
 plt.subplot(122)
 
 plt.title('Validation')
-df.sum().plot(kind='bar'); plt.axhline(0, color='k')
+df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 #+end_src
 
 #+RESULTS:
@@ -136,10 +92,12 @@ df.sum().plot(kind='bar'); plt.axhline(0, color='k')
         jpl_results[jpl_results == 120] = 4
         jpl_results[jpl_results == 180] = 2
         jpl_results[jpl_results == 240] = 1
-  # | 1 | Y | stroma               |
-  # | 2 | R | high grade           |
-  # | 3 | B | benign/normal glands |
-  # | 4 | G | low grade            |
+
+        print(np.mean(true_labels == jpl_results))
+        # | 1 | Y | stroma               |
+        # | 2 | R | high grade           |
+        # | 3 | B | benign/normal glands |
+        # | 4 | G | low grade            |
 
         ypreds.append(jpl_results.flatten())
         ytrue.append(true_labels.flatten())
@@ -148,11 +106,12 @@ df.sum().plot(kind='bar'); plt.axhline(0, color='k')
 #+RESULTS:
 
 #+BEGIN_SRC ipython :session :exports none
-    try:
-        cm
-    except NameError:
-        cm = sklearn.metrics.confusion_matrix(np.array(ytrue).flatten(),
-                                              np.array(ypreds).flatten())
+  del cm
+  try:
+      cm
+  except NameError:
+      cm = sklearn.metrics.confusion_matrix(np.array(ytrue).flatten(),
+                                            np.array(ypreds).flatten())
 #+END_SRC
 
 #+RESULTS:
@@ -186,8 +145,8 @@ plt.xlabel('Predicted label')
   assert raw_img != None
   labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
 
-  plt.figure()
-  plt.suptitle('Test Ex: ' + str(sample_num))
+  plt.figure(figsize=(20,20))
+  # plt.suptitle('Test Ex: ' + str(sample_num))
 
   num_subplots = 3
 
@@ -237,7 +196,8 @@ plt.xlabel('Predicted label')
   augexpersdf = pd.DataFrame(np.array(foo).transpose(), columns = ['rotation', 'flip', 'no augmentation', 'flip and rotation'])
   pd.ewma(augexpersdf, halflife=0.9999).plot()
 
-  plt.title('Training Curves for Data Augmentation')
+  plt.figure(figsize=(40,40))
+  plt.title('Training Curves for Data Augmentation (10 Layers Bottleneck)')
   plt.xlabel('Iteration')
   plt.ylabel('Accuracy')
   plt.ylim([0, 1])
@@ -266,10 +226,11 @@ plt.xlabel('Predicted label')
           asdf.append(float(y))
       foo.append(asdf)
 
-  depthexprdf = pd.DataFrame(np.array(foo).transpose(), columns=['4layers', '6 layers', '18 layers'])
+  depthexprdf = pd.DataFrame(np.array(foo).transpose(), columns=['4 layers', '6 layers', '18 layers'])
   pd.ewma(depthexprdf, halflife=0.9999).plot()
 
-  plt.title('Training Curves for Networks of Different Depths')
+  plt.figure(figsize=(40,40))
+  plt.title('Training Curves for Networks of Different Depths (Couples)')
   plt.xlabel('Iteration')
   plt.ylabel('Accuracy')
   plt.ylim([0, 1])
@@ -278,5 +239,4 @@ plt.xlabel('Predicted label')
 #+RESULTS:
 [[file:/tmp/depth_lr_curves.png]]
 
-*** TODO cedars_sinai_eval.py
 *** TODO confusion matrix for all models. Might not have time for this.
