@@ -1,25 +1,19 @@
-Model Side
-==========
-
-Try a smaller model on a single GPU.
-
-Exponential Moving Averages??
-
-Data Side
-=========
-
-Data augmentation. Very important in the other implementations. You
-shold also do this.
-
-Larger patch size (128). Stride = 1.
-
-Make a plot of the label distribution for each image.
-
 Software
 ========
+
+Let's clean up this code.
 
 Upgrade TF version.
 
 Am I using cudnn??
 
-Implement validation functions in a separate file like a la `cifar10_eval.py`.
+Feedback
+========
+
+Try a high learning rate (1.0).
+
+Do the stuff for validation (confusion matrix, learning curves, etc.)
+
+Go through the architectures again. Get the dimensions right in your head!
+
+What can I do with this code eventually?
