@@ -40,7 +40,7 @@ def chunks(l, n):
     Yield successive n-sized chunks from l.
     http://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks-in-python
     '''
-    for i in xrange(1, len(l), n):
+    for i in xrange(0, len(l), n):
         yield l[i:i+n]
 
 def main(_):
@@ -56,17 +56,18 @@ def main(_):
         for batch in chunks(patches, FLAGS.batch_size):
             preds = sess.run(preds_op, feed_dict={xplaceholder: batch})
             mask.extend(preds)
-        import pdb; pdb.set_trace()
 
         duration = (time.time() - start) / 60
         print('sample num %d duration %0.2f min' %(eval_set[img_idx], duration))
         mask = np.array(mask).reshape([l-FLAGS.patch_size+1, w-FLAGS.patch_size+1])
-        mask = cv2.copyMakeBorder(mask,
-                                  FLAGS.patch_size/2-1,
-                                  FLAGS.patch_size,
-                                  FLAGS.patch_size-1,
-                                  FLAGS.patch_size,
-                                  cv2.BORDER_CONSTANT,value=[0,0,0])
+        # cv2.copyMakeBorder(mask,
+        #                    FLAGS.patch_size/2-1,
+        #                    FLAGS.patch_size/2,
+        #                    FLAGS.patch_size/2-1,
+        #                    FLAGS.patch_size/2,
+        #                    cv2.BORDER_CONSTANT,
+        #                    value=[0, 0, 0]).shape
+
 
         np.save(MODEL_SAVEPATH + '/' + 'test' + str(eval_set[img_idx]) + '_preds.npy', mask)
 
