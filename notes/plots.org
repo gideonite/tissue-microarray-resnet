@@ -1,30 +1,110 @@
+#+AUTHOR: Gideon Dresdner
+#+OPTIONS: toc:nil
+
+* Imports
 #+BEGIN_SRC ipython :session :exports none
-%matplotlib inline
-import matplotlib, numpy
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import scipy.io as sio
-import cv2
-import numpy as np
-import pandas as pd
-import sklearn.metrics
-import json
-matplotlib.style.use('ggplot')
-basedir = "/home/gideon/Data/cedars-sinai/"
-img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
-raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
-with_annotations_filename = basedir + "Color annotation sequential filenames/test%d_Annotated.tif"
-num_samples = 224
+  %matplotlib inline
+  import matplotlib, numpy
+  matplotlib.use('Agg')
+  import matplotlib.pyplot as plt
+  import scipy.io as sio
+  import cv2
+  import numpy as np
+  import pandas as pd
+  import sklearn.metrics
+  import json
+  import os
+  import functools
+  matplotlib.style.use('ggplot')
+  basedir = "/home/gideon/Data/cedars-sinai/"
+  img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
+  raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
+  with_annotations_filename = basedir + "Color annotation sequential filenames/test%d_Annotated.tif"
+  num_samples = 224
+
+  with open('train.txt') as exs:
+      xtr = [int(x.strip()) for x in exs]
+
+  with open('validation.txt') as exs:
+      xval = [int(x.strip()) for x in exs]
+
+  idx2tumor_grade = ['stroma', 'high grade', 'benign/normal glands', 'low grade']
+
+  def directory(path):
+      BASE_DIR = '~/Pictures/figures/tmrn/'
+      dir = BASE_DIR + path
+      if not os.path.exists(dir):
+          os.makedirs(dir)
+      return dir
+#+END_SRC
+
+#+RESULTS:
+  
+* Helper Functions
+
+#+BEGIN_SRC ipython :session :exports none
+  # N.B. duplicated code
+  def center_pixel(patch):
+      '''
+      Takes a patch of pixel-wise labels and extracts the representative
+      label, namely the center of the patch.
+      '''
+      length, height = patch.shape[:2]
+      return np.array([patch[length/2, height/2]-1]) # labels are 0-indexed.
+
+  def _patches(img, patch_size, stride):
+      assert 2 <= len(img.shape) <= 3
+      num_xpatches = int((img.shape[0]-patch_size+1) / stride)
+      num_ypatches = int((img.shape[1]-patch_size+1) / stride)
+
+      #blah
+      ret = []
+      for x in range(0, img.shape[0]-patch_size+1, stride):
+          for y in range(0, img.shape[1]-patch_size+1, stride):
+              ret.append(img[x : x+patch_size, y : y+patch_size])
+      return ret
+
+  def confusion_matrix(ytrue, ypreds, labels):
+        return sklearn.metrics.confusion_matrix(ytrue, ypreds, labels=labels)
+
+  @functools.lru_cache(maxsize=128)
+  def confusion_matrix_for_model(model):
+      ypreds = []
+      ytrue = []
+      for sample_num in xval:
+          preds = np.load('/tmp/%s/test%s_preds.npy' %(model, sample_num))
+
+          labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+          center_labels = labels[63:-64, 63:-64] # TODO hard coded patch size
+          center_labels = center_labels-1        # neural network labels are 0-indexed.
+
+          ypreds.extend(preds)
+          ytrue.extend(center_labels)
+
+      return confusion_matrix(np.concatenate(ytrue),
+                              np.concatenate(ypreds), labels=[0,1,2,3])
+
+  def visualize_confusion_matrix(mat, title):
+      # TODO should this be normalized or not??
+      # cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+      plt.imshow(mat, interpolation='nearest', cmap=plt.cm.Blues)
+      plt.title(title)
+      plt.colorbar()
+      tick_marks = np.arange(4)
+      plt.xticks(tick_marks, idx2tumor_grade, rotation=45)
+      plt.yticks(tick_marks, idx2tumor_grade)
+      plt.tight_layout()
+      plt.ylabel('True label')
+      plt.xlabel('Predicted label')
+
+      return plt
 #+END_SRC
 
 #+RESULTS:
 
+* Label Distribution 
 #+BEGIN_SRC ipython :session :file /tmp/labelcounts.png :exports results
-with open('train.txt') as exs:
-    xtr = [int(x.strip()) for x in exs]
-
-idx2tumor_grade = ['stroma', 'high grade', 'benign/normal glands', 'low grade']
-
 counts = []
 for sample_num in xtr:
     labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
@@ -39,16 +119,13 @@ counts = np.array(counts)
 df = pd.DataFrame(counts)
 df.columns=[idx2tumor_grade]
 
-plt.figure(figsize=(20,20))
+plt.figure()
 plt.suptitle('Label Counts')
 plt.subplot(121)
 
 plt.title('Training')
 plt.ylabel('fraction of dataset')
 df.mean().plot(kind='bar'); plt.axhline(0, color='k')
-
-with open('validation.txt') as exs:
-    xval = [int(x.strip()) for x in exs]
 
 counts = []
 for sample_num in xval:
@@ -73,6 +150,8 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 #+RESULTS:
 [[file:/tmp/labelcounts.png]]
 
+* Benchmarks
+
 #+begin_src ipython :session :exports results
     jpl_basedir = '/home/gideon/Data/jpl-cedars-sinai-results/'
     with open('test.txt') as exs:
@@ -88,12 +167,11 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
         assert np.array_equal(jpl_results[:,:,1], jpl_results[:,:,2])
 
         jpl_results = jpl_results[:,:,0]
-        jpl_results[jpl_results == 60] = 3
-        jpl_results[jpl_results == 120] = 4
+        jpl_results[jpl_results == 60] = 4
+        jpl_results[jpl_results == 120] = 3
         jpl_results[jpl_results == 180] = 2
         jpl_results[jpl_results == 240] = 1
 
-        print(np.mean(true_labels == jpl_results))
         # | 1 | Y | stroma               |
         # | 2 | R | high grade           |
         # | 3 | B | benign/normal glands |
@@ -105,34 +183,23 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 
 #+RESULTS:
 
-#+BEGIN_SRC ipython :session :exports none
-  del cm
+#+BEGIN_SRC ipython :session :exports results :file /tmp/jpl_confusion.png
   try:
-      cm
+      jpl_cm
   except NameError:
-      cm = sklearn.metrics.confusion_matrix(np.array(ytrue).flatten(),
-                                            np.array(ypreds).flatten())
+      jpl_cm = sklearn.metrics.confusion_matrix(np.array(ytrue).flatten(), np.array(ypreds).flatten(), labels=[0,1,2,3])
+  visualize_confusion_matrix(jpl_cm, 'JPL Model')
 #+END_SRC
 
 #+RESULTS:
+[[file:/tmp/jpl_confusion.png]]
 
-#+begin_src ipython :session :file /tmp/jpl_confusion.png :exports results
-cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-title = 'Confusion Matrix for JPL Results'
-plt.imshow(cm_normalized, interpolation='nearest', cmap=plt.cm.Blues)
-plt.title(title)
-plt.colorbar()
-tick_marks = np.arange(4)
-plt.xticks(tick_marks, idx2tumor_grade, rotation=45)
-plt.yticks(tick_marks, idx2tumor_grade)
-plt.tight_layout()
-plt.ylabel('True label')
-plt.xlabel('Predicted label')
-#+end_src
+#+BEGIN_SRC ipython :session :exports results :file /tmp/asdf.png
+  visualize_confusion_matrix(jpl_cm.astype('float') / jpl_cm.sum(axis=1)[:, np.newaxis], 'JPL Model')
+#+END_SRC
 
 #+RESULTS:
-[[file:/tmp/jpl_confusion.png]]
+[[file:/tmp/asdf.png]]
 
 #+begin_src ipython :session :file /tmp/te13.png :exports results
   sample_num = 13
@@ -145,7 +212,7 @@ plt.xlabel('Predicted label')
   assert raw_img != None
   labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
 
-  plt.figure(figsize=(20,20))
+  plt.figure()
   # plt.suptitle('Test Ex: ' + str(sample_num))
 
   num_subplots = 3
@@ -173,6 +240,7 @@ plt.xlabel('Predicted label')
 #+RESULTS:
 [[file:/tmp/te13.png]]
 
+* Learning Curves
 #+begin_src ipython :session :file /tmp/aug_lr_curves.png :exports results
   augmentation_experiments = ['rotation.json',  'flip.json', 'no_augmentation.json', 'flip_rot.json']
   experiment_basedir = '/tmp/'
@@ -239,4 +307,271 @@ plt.xlabel('Predicted label')
 #+RESULTS:
 [[file:/tmp/depth_lr_curves.png]]
 
-*** TODO confusion matrix for all models. Might not have time for this.
+#+BEGIN_SRC ipython :session :file /tmp/model_accuracies.png :exports results
+  def model_accuracy(model):
+      accs = []
+      for sample_num in xval:
+          preds = np.load('/tmp/%s/test%s_preds.npy' %(model, sample_num))
+
+          labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+          center_labels = labels[63:-64, 63:-64] # TODO hard coded patch size
+          center_labels = center_labels-1        # neural network labels are 0-indexed.
+
+          accs.append(np.average((preds == center_labels).flatten()))
+
+      return accs
+
+  model_names = ['4layers_couple', '6layers_couple', 'flip_rot']
+  df = pd.DataFrame(dict((m, model_accuracy(m)) for m in model_names))
+  df.mean().plot(kind='bar'); plt.axhline(0, color='k'); plt.ylabel('validation accuracy')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/model_accuracies.png]]
+
+#+BEGIN_SRC ipython :session :exports results :file /tmp/confusion_matrix_4layers_couple.png
+  cm = confusion_matrix_for_model('4layers_couple')
+  visualize_confusion_matrix(cm, '4 Layers Couple Arch')
+#+END_SRC
+
+#+BEGIN_SRC ipython :session :exports results :file /tmp/confusion_matrix_6layers_couple.png
+  cm = confusion_matrix_for_model('6layers_couple')
+  visualize_confusion_matrix(cm, '6 Layers Couple Arch')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/confusion_matrix_6layers_couple.png]]
+
+#+BEGIN_SRC ipython :session :exports results :file /tmp/confusion_matrix_10layers_withaug.png
+  cm = confusion_matrix_for_model('flip_rot')
+  visualize_confusion_matrix(cm_flip_rot, '10 Layers With Flipping and Rotations')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/confusion_matrix_10layers_withaug.png]]
+
+#+BEGIN_SRC ipython :session :exports none :eval never
+# TODO refactor
+  for sample_num in xval:
+      model = '4layers_couple'
+      results = np.load('/tmp/%s/test%s_preds.npy' %(model, sample_num))
+
+      plt.subplot(1,num_subplots,1)
+      cm = matplotlib.colors.ListedColormap(['yellow', 'red', 'blue', 'green'])
+      plt.imshow(results, cmap=cm)
+      # plt.colorbar()
+      plt.gca().set_xticklabels([])
+      plt.title('Sample %d' % sample_num)
+
+      ax = plt.subplot(1,num_subplots,2)
+      imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
+      assert imgplot != None
+      plt.gca().set_xticklabels([])
+      # plt.gca().set_yticklabels([])
+      plt.title('Pathologist Label')
+      plt.savefig('/tmp/results_%s_test%s.png' %(model, str(sample_num)),
+                  bbox_inches='tight')
+#+END_SRC
+
+* 4 Layer Couple Architecture Validation Set
+
+[[/tmp/results_4layers_couple_test101.png]]
+
+[[/tmp/results_4layers_couple_test102.png]]
+
+[[/tmp/results_4layers_couple_test107.png]]
+
+[[/tmp/results_4layers_couple_test120.png]]
+
+[[/tmp/results_4layers_couple_test122.png]]
+
+[[/tmp/results_4layers_couple_test125.png]]
+
+[[/tmp/results_4layers_couple_test151.png]]
+
+[[/tmp/results_4layers_couple_test157.png]]
+
+[[/tmp/results_4layers_couple_test163.png]]
+
+[[/tmp/results_4layers_couple_test169.png]]
+
+[[/tmp/results_4layers_couple_test170.png]]
+
+[[/tmp/results_4layers_couple_test171.png]]
+
+[[/tmp/results_4layers_couple_test199.png]]
+
+[[/tmp/results_4layers_couple_test200.png]]
+
+[[/tmp/results_4layers_couple_test204.png]]
+
+[[/tmp/results_4layers_couple_test207.png]]
+
+[[/tmp/results_4layers_couple_test220.png]]
+
+[[/tmp/results_4layers_couple_test36.png]]
+
+[[/tmp/results_4layers_couple_test48.png]]
+
+[[/tmp/results_4layers_couple_test53.png]]
+
+[[/tmp/results_4layers_couple_test61.png]]
+
+[[/tmp/results_4layers_couple_test69.png]]
+
+[[/tmp/results_4layers_couple_test75.png]]
+
+[[/tmp/results_4layers_couple_test77.png]]
+
+[[/tmp/results_4layers_couple_test89.png]]
+* 6 Layer Couple Architecture Validation Set
+#+BEGIN_SRC ipython :session :exports none :eval never
+  for sample_num in xval:
+      model = '6layers_couple'
+      results = np.load('/tmp/%s/test%s_preds.npy' %(model, sample_num))
+
+      plt.subplot(1,num_subplots,1)
+      cm = matplotlib.colors.ListedColormap(['yellow', 'red', 'blue', 'green'])
+      plt.imshow(results, cmap=cm)
+      # plt.colorbar()
+      plt.gca().set_xticklabels([])
+      plt.title('Sample %d' % sample_num)
+
+      ax = plt.subplot(1,num_subplots,2)
+      imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
+      assert imgplot != None
+      plt.gca().set_xticklabels([])
+      # plt.gca().set_yticklabels([])
+      plt.title('Pathologist Label')
+      plt.savefig('/tmp/results_%s_test%s.png' %(model, str(sample_num)),
+                  bbox_inches='tight')
+#+END_SRC
+
+#+RESULTS:
+: <matplotlib.figure.Figure at 0x7fcc2b234c50>
+
+[[/tmp/results_6layers_couple_test101.png]]
+
+[[/tmp/results_6layers_couple_test102.png]]
+
+[[/tmp/results_6layers_couple_test107.png]]
+
+[[/tmp/results_6layers_couple_test120.png]]
+
+[[/tmp/results_6layers_couple_test122.png]]
+
+[[/tmp/results_6layers_couple_test125.png]]
+
+[[/tmp/results_6layers_couple_test151.png]]
+
+[[/tmp/results_6layers_couple_test157.png]]
+
+[[/tmp/results_6layers_couple_test163.png]]
+
+[[/tmp/results_6layers_couple_test169.png]]
+
+[[/tmp/results_6layers_couple_test170.png]]
+
+[[/tmp/results_6layers_couple_test171.png]]
+
+[[/tmp/results_6layers_couple_test199.png]]
+
+[[/tmp/results_6layers_couple_test200.png]]
+
+[[/tmp/results_6layers_couple_test204.png]]
+
+[[/tmp/results_6layers_couple_test207.png]]
+
+[[/tmp/results_6layers_couple_test220.png]]
+
+[[/tmp/results_6layers_couple_test36.png]]
+
+[[/tmp/results_6layers_couple_test48.png]]
+
+[[/tmp/results_6layers_couple_test53.png]]
+
+[[/tmp/results_6layers_couple_test61.png]]
+
+[[/tmp/results_6layers_couple_test69.png]]
+
+[[/tmp/results_6layers_couple_test75.png]]
+
+[[/tmp/results_6layers_couple_test77.png]]
+
+[[/tmp/results_6layers_couple_test89.png]]
+
+* 10 Layer Bottle Neck With Data Flipping and Rotation
+#+BEGIN_SRC ipython :session :exports none
+  for sample_num in xval:
+      model = 'flip_rot'
+      results = np.load('/tmp/%s/test%s_preds.npy' %(model, sample_num))
+
+      plt.subplot(1,num_subplots,1)
+      cm = matplotlib.colors.ListedColormap(['yellow', 'red', 'blue', 'green'])
+      plt.imshow(results, cmap=cm)
+      # plt.colorbar()
+      plt.gca().set_xticklabels([])
+      plt.title('Sample %d' % sample_num)
+
+      ax = plt.subplot(1,num_subplots,2)
+      imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
+      assert imgplot != None
+      plt.gca().set_xticklabels([])
+      # plt.gca().set_yticklabels([])
+      plt.title('Pathologist Label')
+      plt.savefig('/tmp/results_%s_test%s.png' %(model, str(sample_num)),
+                  bbox_inches='tight')
+#+END_SRC
+
+#+RESULTS:
+: <matplotlib.figure.Figure at 0x7fcc2afda5f8>
+
+[[/tmp/results_flip_rot_test101.png]]
+
+[[/tmp/results_flip_rot_test102.png]]
+
+[[/tmp/results_flip_rot_test107.png]]
+
+[[/tmp/results_flip_rot_test120.png]]
+
+[[/tmp/results_flip_rot_test122.png]]
+
+[[/tmp/results_flip_rot_test125.png]]
+
+[[/tmp/results_flip_rot_test151.png]]
+
+[[/tmp/results_flip_rot_test157.png]]
+
+[[/tmp/results_flip_rot_test163.png]]
+
+[[/tmp/results_flip_rot_test169.png]]
+
+[[/tmp/results_flip_rot_test170.png]]
+
+[[/tmp/results_flip_rot_test171.png]]
+
+[[/tmp/results_flip_rot_test199.png]]
+
+[[/tmp/results_flip_rot_test200.png]]
+
+[[/tmp/results_flip_rot_test204.png]]
+
+[[/tmp/results_flip_rot_test207.png]]
+
+[[/tmp/results_flip_rot_test220.png]]
+
+[[/tmp/results_flip_rot_test36.png]]
+
+[[/tmp/results_flip_rot_test48.png]]
+
+[[/tmp/results_flip_rot_test53.png]]
+
+[[/tmp/results_flip_rot_test61.png]]
+
+[[/tmp/results_flip_rot_test69.png]]
+
+[[/tmp/results_flip_rot_test75.png]]
+
+[[/tmp/results_flip_rot_test77.png]]
+
+[[/tmp/results_flip_rot_test89.png]]
