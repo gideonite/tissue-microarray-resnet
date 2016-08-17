@@ -16,11 +16,12 @@
   import os
   import functools
   matplotlib.style.use('ggplot')
-  basedir = "/home/gideon/Data/cedars-sinai/"
-  img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
-  raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
-  with_annotations_filename = basedir + "Color annotation sequential filenames/test%d_Annotated.tif"
+  CEDARS_SINAI_DIR = "/home/gideon/Data/cedars-sinai/"
+  img_filename = CEDARS_SINAI_DIR + "TIFF color normalized sequential filenames/test%d.tif"
+  raw_label_filename = CEDARS_SINAI_DIR + "ATmask sequential filenames/test%d_Mask.mat"
+  with_annotations_filename = CEDARS_SINAI_DIR + "Color annotation sequential filenames/test%d_Annotated.tif"
   num_samples = 224
+  BASEDIR = '/home/gideon/Data/tmrn-preds/'
 
   with open('train.txt') as exs:
       xtr = [int(x.strip()) for x in exs]
@@ -72,7 +73,7 @@
       ypreds = []
       ytrue = []
       for sample_num in xval:
-          preds = np.load('/tmp/%s/test%s_preds.npy' %(model, sample_num))
+          preds = np.load(BASEDIR + '/%s/test%s_preds.npy' %(model, sample_num))
 
           labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
           center_labels = labels[63:-64, 63:-64] # TODO hard coded patch size
@@ -217,11 +218,6 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 
 #+begin_src ipython :session :file /tmp/te13.png :exports results
   sample_num = 13
-  basedir = "/home/gideon/Data/cedars-sinai/"
-  img_filename = basedir + "TIFF color normalized sequential filenames/test%d.tif"
-  raw_label_filename = basedir + "ATmask sequential filenames/test%d_Mask.mat"
-  with_annotations_filename = basedir + "Color annotation sequential filenames/test%d_Annotated.tif"
-
   raw_img = cv2.imread(img_filename %(sample_num))
   assert raw_img != None
   labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
@@ -257,11 +253,9 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 * Learning Curves
 #+begin_src ipython :session :file /tmp/aug_lr_curves.png :exports results
   augmentation_experiments = ['rotation.json',  'flip.json', 'no_augmentation.json', 'flip_rot.json']
-  experiment_basedir = '/tmp/'
-
   train_accs = []
   for expfilename in augmentation_experiments:
-      with open(experiment_basedir + expfilename) as json_data:
+      with open(BASEDIR + expfilename) as json_data:
           experiment = json.load(json_data)
           train_accs.append(experiment['train_accs'])
 
@@ -290,11 +284,9 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 
 #+BEGIN_SRC ipython :session :file /tmp/depth_lr_curves.png :exports results
   depth_experiments = ['4layers_couple.json', '6layers_couple.json', '18_layers_couple.json']
-  experiment_basedir = '/tmp/'
-
   train_accs = []
   for depth_expr in depth_experiments:
-      with open(experiment_basedir + depth_expr) as json_data:
+      with open(BASEDIR + depth_expr) as json_data:
           experiment = json.load(json_data)
           train_accs.append(experiment['train_accs'])
 
@@ -325,7 +317,7 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
   def model_accuracy(model):
       accs = []
       for sample_num in xval:
-          preds = np.load('/tmp/%s/test%s_preds.npy' %(model, sample_num))
+          preds = np.load(BASEDIR + '/%s/test%s_preds.npy' %(model, sample_num))
 
           labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
           center_labels = labels[63:-64, 63:-64] # TODO hard coded patch size
@@ -368,7 +360,7 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 # TODO refactor
   for sample_num in xval:
       model = '4layers_couple'
-      results = np.load('/tmp/%s/test%s_preds.npy' %(model, sample_num))
+      results = np.load(BASEDIR + '/%s/test%s_preds.npy' %(model, sample_num))
 
       plt.subplot(1,num_subplots,1)
       cm = matplotlib.colors.ListedColormap(['yellow', 'red', 'blue', 'green'])
