@@ -136,21 +136,23 @@ def inference(xplaceholder, arch_or_groups):
                    strides=[1, 1, 1, 1], padding='VALID')
     return _flatten(net)
 
-architectures = { '10_layers_bn': [BottleneckGroup(3,128,32)],
-                  '41_layers_bn': [BottleneckGroup(3, 128, 32),
-                                   BottleneckGroup(3, 256, 64),
-                                   BottleneckGroup(3, 512, 128),
-                                   BottleneckGroup(3, 1024, 256)],
-                  '50_layers_bn': [BottleneckGroup(3, 64, 256),
-                                   BottleneckGroup(4, 128, 512),
-                                   BottleneckGroup(6, 256, 1024),
-                                   BottleneckGroup(3, 512, 2048)],
-                  '4_layers_couple': [CoupleGroup(1, 64)],
-                  '6_layers_couple': [CoupleGroup(2, 64)],
-                  '18_layers_couple': [CoupleGroup(2, 64),
-                                       CoupleGroup(2, 128),
-                                       CoupleGroup(2, 256),
-                                       CoupleGroup(2, 512)]
+architectures = {'10_layers': [BottleneckGroup(3,128,32)], # TODO hack
+                 '10_layers_bn': [BottleneckGroup(3,128,32)],
+                 '41_layers_bn': [BottleneckGroup(3, 128, 32),
+                                  BottleneckGroup(3, 256, 64),
+                                  BottleneckGroup(3, 512, 128),
+                                  BottleneckGroup(3, 1024, 256)],
+                 '50_layers_bn': [BottleneckGroup(3, 64, 256),
+                                  BottleneckGroup(4, 128, 512),
+                                  BottleneckGroup(6, 256, 1024),
+                                  BottleneckGroup(3, 512, 2048)],
+                 '4_layers_couple': [CoupleGroup(1, 64)],
+                 '5_layers_couple': [CoupleGroup(2, 64)], # TODO hack
+                 '6_layers_couple': [CoupleGroup(2, 64)],
+                 '18_layers_couple': [CoupleGroup(2, 64),
+                                      CoupleGroup(2, 128),
+                                      CoupleGroup(2, 256),
+                                      CoupleGroup(2, 512)]
 }
 
 def loss(logits, labels):
