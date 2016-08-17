@@ -157,7 +157,7 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
     with open('test.txt') as exs:
         xte = [int(x.strip()) for x in exs]
 
-    ypreds = []
+    jpl_ypreds = []
     ytrue = []
     for sample_num in xte:
         true_labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
@@ -167,39 +167,53 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
         assert np.array_equal(jpl_results[:,:,1], jpl_results[:,:,2])
 
         jpl_results = jpl_results[:,:,0]
-        jpl_results[jpl_results == 60] = 4
-        jpl_results[jpl_results == 120] = 3
-        jpl_results[jpl_results == 180] = 2
-        jpl_results[jpl_results == 240] = 1
+        jpl_results[jpl_results == 60] = 1
+        jpl_results[jpl_results == 120] = 2
+        jpl_results[jpl_results == 180] = 3
+        jpl_results[jpl_results == 240] = 4
 
         # | 1 | Y | stroma               |
         # | 2 | R | high grade           |
         # | 3 | B | benign/normal glands |
         # | 4 | G | low grade            |
 
-        ypreds.append(jpl_results.flatten())
+        jpl_ypreds.append(jpl_results.flatten())
         ytrue.append(true_labels.flatten())
 #+end_src
 
 #+RESULTS:
-
+  
 #+BEGIN_SRC ipython :session :exports results :file /tmp/jpl_confusion.png
   try:
       jpl_cm
   except NameError:
-      jpl_cm = sklearn.metrics.confusion_matrix(np.array(ytrue).flatten(), np.array(ypreds).flatten(), labels=[0,1,2,3])
-  visualize_confusion_matrix(jpl_cm, 'JPL Model')
+      jpl_cm = sklearn.metrics.confusion_matrix(np.array(ytrue).flatten(), np.array(jpl_ypreds).flatten(), labels=[1,2,3,4])
+  normalized_jpl_cm = jpl_cm.astype('float') / jpl_cm.sum(axis=1)[:, np.newaxis]
+  visualize_confusion_matrix(normalized_jpl_cm, 'JPL Model')
 #+END_SRC
 
+# Sanity check for proper mapping of JPL png values to label values.
+#+BEGIN_SRC ipython :session  :exports results :file /tmp/asdf.png :eval never
+  sample_num = xte[3]
+  true_labels = sio.loadmat(raw_label_filename % sample_num)['ATmask']
+  jpl_results = cv2.imread(jpl_basedir + 'output_masks/test%d_Mask.png' % sample_num)
+  jpl_results = jpl_results[:,:,0]
+  jpl_results[jpl_results == 60] = 1
+  jpl_results[jpl_results == 120] = 2
+  jpl_results[jpl_results == 180] = 3
+  jpl_results[jpl_results == 240] = 4
+  plt.imshow(np.concatenate([jpl_results, np.zeros((1201,128)), true_labels], axis=1))
+#+END_SRC
+  
 #+RESULTS:
 [[file:/tmp/jpl_confusion.png]]
 
-#+BEGIN_SRC ipython :session :exports results :file /tmp/asdf.png
-  visualize_confusion_matrix(jpl_cm.astype('float') / jpl_cm.sum(axis=1)[:, np.newaxis], 'JPL Model')
+#+BEGIN_SRC ipython :session :exports results
+"Validation Accuracy %.2f" % np.average(np.array(ytrue).flatten() == np.array(jpl_ypreds).flatten())
 #+END_SRC
 
 #+RESULTS:
-[[file:/tmp/asdf.png]]
+: 'Validation Accuracy 0.81'
 
 #+begin_src ipython :session :file /tmp/te13.png :exports results
   sample_num = 13
