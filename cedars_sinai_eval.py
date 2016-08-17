@@ -28,11 +28,14 @@ arch = resnet.architectures[log['cmd'].split()[log['cmd'].split().index('--archi
 net = resnet.inference(xplaceholder, arch)            # TODO make sure to save this in the log.
 logits = train.final_layer_types[FLAGS.label_f](net)  # TODO make sure to save this in the log.
 preds_op = tf.argmax(logits, 1)
+global_step = tf.get_variable(
+    'global_step', [],
+    initializer=tf.constant_initializer(0), trainable=False)
 
 sess = tf.Session()
 init = tf.initialize_all_variables()
-saver = tf.train.Saver()
 sess.run(init)
+saver = tf.train.Saver()
 train.resume(sess, saver)
 
 def chunks(l, n):
@@ -67,7 +70,6 @@ def main(_):
         #                    FLAGS.patch_size/2,
         #                    cv2.BORDER_CONSTANT,
         #                    value=[0, 0, 0]).shape
-
 
         np.save(MODEL_SAVEPATH + '/' + 'test' + str(eval_set[img_idx]) + '_preds.npy', mask)
 

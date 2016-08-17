@@ -177,14 +177,13 @@ def learning_rate_schedule(iter, num_iterations):
         return base * 0.01
 
 def resume(sess, saver):
-    if FLAGS.resume:
-        MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name)
-        latest = tf.train.latest_checkpoint(MODEL_SAVEPATH)
-        if not latest:
-            print "No checkpoint to continue from in", MODEL_SAVEPATH
-            sys.exit(1)
-        print "resuming...", latest
-        saver.restore(sess, latest)
+    MODEL_SAVEPATH = mkdir(FLAGS.cache_basepath + '/' + FLAGS.experiment_name)
+    latest = tf.train.latest_checkpoint(MODEL_SAVEPATH)
+    if not latest:
+        print "No checkpoint to continue from in", MODEL_SAVEPATH
+        sys.exit(1)
+    print "resuming...", latest
+    saver.restore(sess, latest)
 
 learning_rate = tf.placeholder(tf.float32, shape=[])
 
@@ -231,7 +230,7 @@ def single_gpu_train():
     init = tf.initialize_all_variables()
     saver = tf.train.Saver()
     sess.run(init)
-    resume(sess, saver)
+    if FLAGS.resume: resume(sess, saver)
 
     it = train_iter()
     for iter_num in xrange(FLAGS.num_epochs * num_examples):
