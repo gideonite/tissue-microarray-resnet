@@ -30,6 +30,9 @@ flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device place
 flags.DEFINE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
 flags.DEFINE_integer('num_epochs', 20, 'Number of times to go over the dataset')
 flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use for training and testing.')
+
+
+flags.DEFINE_string('task', '4labels', 'What is our task? [4labels (defualt, center pixel), 2labels (center pixel), fraclabels]')
 TOWER_NAME = 'tower'
 LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
 
