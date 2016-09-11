@@ -20,11 +20,13 @@ LOG_PATH = FLAGS.results_basepath  + FLAGS.experiment_name + ".json"
 with open(LOG_PATH) as logfile:
     log = json.load(logfile)
 
+arch = resnet.architectures[log['cmd'].split()[log['cmd'].split().index('--architecture') + 1]] # TODO hack
+patch_size = log['patch_size']
+
 num_channels = 3
-xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels), name='xplaceholder')
+xplaceholder = tf.placeholder(tf.float32, shape=(None, patch_size, patch_size, num_channels), name='xplaceholder')
 yplaceholder = tf.placeholder(tf.int64, shape=(None), name='yplaceholder')
 
-arch = resnet.architectures[log['cmd'].split()[log['cmd'].split().index('--architecture') + 1]] # TODO hack
 net = resnet.inference(xplaceholder, arch)            # TODO make sure to save this in the log.
 logits = train.final_layer_types[FLAGS.label_f](net)  # TODO make sure to save this in the log.
 preds_op = tf.argmax(logits, 1)
@@ -53,21 +55,21 @@ def main(_):
     l,w,h = images[0].shape
     for img_idx, img in enumerate(images): # ~ 4 sec. / img
         start = time.time()
-        # mask = np.empty([l-FLAGS.patch_size*2, w-FLAGS.patch_size*2, 1])
+        # mask = np.empty([l-patch_size*2, w-patch_size*2, 1])
         mask = []
-        patches = etl._patches(img, FLAGS.patch_size, 1) 
+        patches = etl._patches(img, patch_size, 1) 
         for batch in chunks(patches, FLAGS.batch_size):
             preds = sess.run(preds_op, feed_dict={xplaceholder: batch})
             mask.extend(preds)
 
         duration = (time.time() - start) / 60
         print('sample num %d duration %0.2f min' %(eval_set[img_idx], duration))
-        mask = np.array(mask).reshape([l-FLAGS.patch_size+1, w-FLAGS.patch_size+1])
+        mask = np.array(mask).reshape([l-patch_size+1, w-patch_size+1])
         # cv2.copyMakeBorder(mask,
-        #                    FLAGS.patch_size/2-1,
-        #                    FLAGS.patch_size/2,
-        #                    FLAGS.patch_size/2-1,
-        #                    FLAGS.patch_size/2,
+        #                    patch_size/2-1,
+        #                    patch_size/2,
+        #                    patch_size/2-1,
+        #                    patch_size/2,
         #                    cv2.BORDER_CONSTANT,
         #                    value=[0, 0, 0]).shape
 
