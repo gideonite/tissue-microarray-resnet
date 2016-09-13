@@ -82,17 +82,26 @@
   def load_labels(sample_num):
       return sio.loadmat(raw_label_filename % sample_num)['ATmask']
 
+  def load_log(model):
+      with open(BASEDIR + '/%s.json' % model) as logfile:
+          return json.load(logfile)
+
   def load_groundtruth(sample_num):
       return cv2.imread(with_annotations_filename % sample_num)
 
   @functools.lru_cache(maxsize=128)
   def confusion_matrix_for_model(model):
+      log = load_log(model)
+      ps = log['patch_size']
+
+      # labels[63:-64, 63:-64]
+
       ypreds = []
       ytrue = []
       for sample_num in xval:
           preds = load_preds(model, sample_num)
           labels = load_labels(sample_num)
-          center_labels = labels[63:-64, 63:-64] # TODO hard coded patch size
+          center_labels = labels[ps/2-1:-ps/2, ps/2-1:-ps/2]
           center_labels = center_labels-1        # neural network labels are 0-indexed.
 
           ypreds.extend(preds)
@@ -135,7 +144,7 @@
 #+END_SRC
 
 #+RESULTS:
-
+  
 * Label Distribution 
 #+BEGIN_SRC ipython :session :file /tmp/labelcounts.png :exports results
 counts = []
@@ -341,6 +350,57 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
 #+RESULTS:
 [[file:/tmp/depth_lr_curves.png]]
 
+** Patch Size Experiments
+
+In these experiments I hold the NN architecture fixed at 4 layers: one
+Conv7x7 initial layer, two internal Conv3x3 layers and a final layer
+wired up to the outputs (all 4 labels). (Duplicated in the CM section).
+
+#+BEGIN_SRC ipython :session :exports none
+  #@functools.lru_cache(maxsize=128)
+  def simple_plot_tr_accs(experiment_name, title):
+      log = load_log(experiment_name)
+      tr_accs = log['train_accs']
+      tr_accs = np.array(tr_accs)[:,1]
+      tr_accs.astype('float')
+      df = pd.DataFrame(tr_accs)
+      plot = pd.ewma(df, halflife=0.9999).plot()
+      plt.title(title)
+      plt.xlabel('iteration num')
+      plt.ylabel('accuracy')
+      return plot
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC ipython :session :file /tmp/ps16_learning_curve.png :exports results
+simple_plot_tr_accs('ps16', 'Patch Size 16')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/ps16_learning_curve.png]]
+
+#+BEGIN_SRC ipython :session :file /tmp/ps32_learning_curve.png :exports results
+simple_plot_tr_accs('ps32', 'Patch Size 32')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/ps32_learning_curve.png]]
+
+#+BEGIN_SRC ipython :session :file /tmp/ps64_learning_curve.png :exports results
+simple_plot_tr_accs('ps64', 'Patch Size 64')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/ps64_learning_curve.png]]
+
+#+BEGIN_SRC ipython :session :file /tmp/ps128_learning_curve.png :exports results
+simple_plot_tr_accs('ps128', 'Patch Size 128')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/ps128_learning_curve.png]]
+
 * Validation Results (CM and Accuracies)
 
 #+BEGIN_SRC ipython :session :file /tmp/model_accuracies.png :exports results
@@ -370,44 +430,87 @@ df.mean().plot(kind='bar'); plt.axhline(0, color='k')
   visualize_confusion_matrix(cm, '4 Layers Couple Arch')
 #+END_SRC
 
+#+RESULTS:
+[[file:/tmp/confusion_matrix_4layers_couple.png]]
+
 #+BEGIN_SRC ipython :session :exports results :file /tmp/confusion_matrix_6layers_couple.png
   cm = confusion_matrix_for_model('6layers_couple')
   visualize_confusion_matrix(cm, '6 Layers Couple Arch')
 #+END_SRC
 
 #+RESULTS:
-[[file:/tmp/confusion_matrix_6layers_couple.png]]
+# [[file:/tmp/confusion_matrix_6layers_couple.png]]
 
 #+BEGIN_SRC ipython :session :exports results :file /tmp/confusion_matrix_10layers_withaug.png
   cm = confusion_matrix_for_model('flip_rot')
   visualize_confusion_matrix(cm, '10 Layers With Flipping and Rotations')
 #+END_SRC
 
+** Patch Size Experiments
+
+In these experiments I hold the NN architecture fixed at 4 layers: one
+Conv7x7 initial layer, two internal Conv3x3 layers and a final layer
+wired up to the outputs (all 4 labels).
+
 #+RESULTS:
 [[file:/tmp/confusion_matrix_10layers_withaug.png]]
 
-#+BEGIN_SRC ipython :session :exports none :eval never
-# TODO refactor
-  for sample_num in xval:
-      model = '4layers_couple'
-      results = np.load(BASEDIR + '/%s/test%s_preds.npy' %(model, sample_num))
-
-      plt.subplot(1,num_subplots,1)
-      cm = matplotlib.colors.ListedColormap(['yellow', 'red', 'blue', 'green'])
-      plt.imshow(results, cmap=cm)
-      # plt.colorbar()
-      plt.gca().set_xticklabels([])
-      plt.title('Sample %d' % sample_num)
-
-      ax = plt.subplot(1,num_subplots,2)
-      imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
-      assert imgplot != None
-      plt.gca().set_xticklabels([])
-      # plt.gca().set_yticklabels([])
-      plt.title('Pathologist Label')
-      plt.savefig('/tmp/results_%s_test%s.png' %(model, str(sample_num)),
-                  bbox_inches='tight')
+#+BEGIN_SRC ipython :session :exports results :file /tmp/ps16.png
+  cm = confusion_matrix_for_model('ps16')
+  visualize_confusion_matrix(cm, 'Patch Size 16')
 #+END_SRC
+
+#+RESULTS:
+[[file:/tmp/ps16.png]]
+
+#+BEGIN_SRC ipython :session :exports results :file /tmp/ps32.png
+  cm = confusion_matrix_for_model('ps32')
+  visualize_confusion_matrix(cm, 'Patch Size 32')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/ps32.png]]
+
+#+BEGIN_SRC ipython :session :exports results :file /tmp/ps64.png
+  cm = confusion_matrix_for_model('ps64')
+  visualize_confusion_matrix(cm, 'Patch Size 64')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/ps64.png]]
+
+#+BEGIN_SRC ipython :session :exports results :file /tmp/ps128.png
+  cm = confusion_matrix_for_model('ps128')
+  visualize_confusion_matrix(cm, 'Patch Size 128')
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/ps128.png]]
+
+
+
+# #+BEGIN_SRC ipython :session :exports none :eval never
+# # TODO refactor
+#   for sample_num in xval:
+#       model = '4layers_couple'
+#       results = np.load(BASEDIR + '/%s/test%s_preds.npy' %(model, sample_num))
+
+#       plt.subplot(1,num_subplots,1)
+#       cm = matplotlib.colors.ListedColormap(['yellow', 'red', 'blue', 'green'])
+#       plt.imshow(results, cmap=cm)
+#       # plt.colorbar()
+#       plt.gca().set_xticklabels([])
+#       plt.title('Sample %d' % sample_num)
+
+#       ax = plt.subplot(1,num_subplots,2)
+#       imgplot = plt.imshow(cv2.imread(with_annotations_filename % sample_num))
+#       assert imgplot != None
+#       plt.gca().set_xticklabels([])
+#       # plt.gca().set_yticklabels([])
+#       plt.title('Pathologist Label')
+#       plt.savefig('/tmp/results_%s_test%s.png' %(model, str(sample_num)),
+#                   bbox_inches='tight')
+# #+END_SRC
 
 # * 4 Layer Couple Architecture Validation Set
 
