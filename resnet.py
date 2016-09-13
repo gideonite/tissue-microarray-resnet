@@ -34,6 +34,9 @@ def fully_connected(x, outdim, activation=tf.nn.relu):
     # OMG 
     return tf.matmul(x, weights) + biases
 
+def fraclabels(x):
+    raise NotImplemented
+
 def _conv2d(x, filter_shape, num_channels, stride):
     weights = _get_variable('weights', filter_shape + [x.get_shape()[-1].value, num_channels], weight_decay=FLAGS.weight_decay)
     conv = tf.nn.conv2d(x, weights, stride, padding='SAME')

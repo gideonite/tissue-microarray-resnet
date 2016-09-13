@@ -49,6 +49,9 @@ def center_pixel(patch):
     length, height = patch.shape[:2]
     return np.array([patch[length/2, height/2]-1]) # labels are 0-indexed.
 
+def fraclabels(patch):
+    raise NotImplemented
+
 def _patches(img, patch_size, stride):
     assert 2 <= len(img.shape) <= 3
     num_xpatches = int((img.shape[0]-patch_size+1) / stride)

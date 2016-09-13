@@ -6,8 +6,7 @@ import pickle
 import time
 import sys
 
-import cedars_sinai_etl as etl
-import cedars_sinai_etl2 as etl2
+import cedars_sinai_etl2 as etl
 
 import resnet
 import numpy as np
@@ -17,7 +16,7 @@ FLAGS = flags.FLAGS
 
 prog_start = time.time()
 
-flags.DEFINE_string('architecture', '41_layers_bn', '')
+flags.DEFINE_string('architecture', '10_layers', '')
 flags.DEFINE_string('augmentations', '', '')
 flags.DEFINE_integer('batch_size', 128, 'Number of examples per GD batch')
 flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
@@ -195,10 +194,13 @@ learning_rate = tf.placeholder(tf.float32, shape=[])
 optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 
 label_functions = {'2labels': lambda patch: etl.collapse_classes(etl.center_pixel(patch)),
-                   '4labels': etl.center_pixel}
+                   '4labels': etl.center_pixel,
+                   'fraclabels': etl.fraclabels}
 
 final_layer_types = {'2labels': lambda net: resnet.fully_connected(net, outdim=2),
-                     '4labels': lambda net: resnet.fully_connected(net, outdim=4)}
+                     '4labels': lambda net: resnet.fully_connected(net, outdim=4),
+                     'fraclabels': lambda net: resnet.fraclabels # TODO rename
+}
 
 def single_gpu_train():
     log = maybe_load_logfile()
@@ -213,10 +215,10 @@ def single_gpu_train():
     else:
         augmentations = [aug.strip() for aug in FLAGS.augmentations.split(',')]
     
-    num_examples, train_iter = etl2.dataset(patch_size=FLAGS.patch_size,
+    num_examples, train_iter = etl.dataset(patch_size=FLAGS.patch_size,
                                             stride=FLAGS.stride,
                                             batch_size=FLAGS.batch_size,
-                                            label_f=etl2.center_pixel,
+                                            label_f=etl.center_pixel,
                                             augmentations=augmentations)
 
     net = resnet.inference(xplaceholder, FLAGS.architecture)
