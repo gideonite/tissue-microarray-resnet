@@ -3,7 +3,7 @@ import cv2
 from matplotlib import pyplot as plt
 import os
 import sys
-import cedars_sinai_etl
+# import cedars_sinai_etl TODO etl is dead, long live etl2
 import resnet
 import sklearn.metrics
 import json
