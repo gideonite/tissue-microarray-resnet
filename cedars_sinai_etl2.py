@@ -47,10 +47,19 @@ def center_pixel(patch):
     label, namely the center of the patch.
     '''
     length, height = patch.shape[:2]
-    return np.array([patch[length/2, height/2]-1]) # labels are 0-indexed.
+    return np.array(patch[length/2, height/2]-1) # labels are 0-indexed.
 
 def fraclabels(patch):
-    raise NotImplemented
+    labels, counts = np.unique(patch, return_counts=True)
+
+    # assuming that we want the fraction of all 4 labels.
+    ret = [0,0,0,0]
+    for label, count in zip(labels, counts):
+        ret[label-1] = count # labels are 0-indexed
+
+    total = float(sum(ret))
+
+    return [c/total for c in ret]
 
 def _patches(img, patch_size, stride):
     assert 2 <= len(img.shape) <= 3
@@ -107,7 +116,7 @@ def dataset(patch_size, stride, batch_size, augmentations=[], label_f=center_pix
                 xbatch.append(x)
                 ybatch.append(ys[i])
 
-            yield np.array(xbatch), np.array([label_f(y)[0] for y in ybatch])
+            yield np.array(xbatch), np.array([label_f(y) for y in ybatch])
 
     return num_examples, iter
 
