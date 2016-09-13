@@ -17,14 +17,13 @@ FLAGS = flags.FLAGS
 
 prog_start = time.time()
 
-flags.DEFINE_string('architecture', '41_layers', '')
+flags.DEFINE_string('architecture', '41_layers_bn', '')
 flags.DEFINE_string('augmentations', '', '')
 flags.DEFINE_integer('batch_size', 128, 'Number of examples per GD batch')
 flags.DEFINE_string('cache_basepath', '/mnt/data/output/', '')
 flags.DEFINE_boolean('resume', False, 'Resume training or clobber the stuff and start over.')
 flags.DEFINE_boolean('debug', False, 'Run in debug mode. (Skips test set evaluation).')
 flags.DEFINE_string('experiment_name', 'experiment_' + str(prog_start), '')
-flags.DEFINE_string('label_f', 'center_pixel_4labels', 'Which function to use for calculating the label for a patch')
 flags.DEFINE_string('results_basepath', '/mnt/data/results/', '')
 flags.DEFINE_boolean('log_device_placement', False, 'Whether to log device placement.')
 flags.DEFINE_integer('log_frequency', 100, 'How often to record the train and validation errors.')
@@ -124,7 +123,7 @@ def tower_loss(scope, xplaceholder, yplaceholder):
     
     net = resnet.inference(xplaceholder, FLAGS.architecture)
 
-    logits = final_layer_types[FLAGS.label_f](net)
+    logits = final_layer_types[FLAGS.task](net)
     
     _ = resnet.loss(logits, yplaceholder)
     
@@ -195,11 +194,11 @@ learning_rate = tf.placeholder(tf.float32, shape=[])
 
 optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 
-label_functions = {'center_pixel_2labels': lambda patch: etl.collapse_classes(etl.center_pixel(patch)),
-                   'center_pixel_4labels': etl.center_pixel}
+label_functions = {'2labels': lambda patch: etl.collapse_classes(etl.center_pixel(patch)),
+                   '4labels': etl.center_pixel}
 
-final_layer_types = {'center_pixel_2labels': lambda net: resnet.fully_connected(net, outdim=2),
-                     'center_pixel_4labels': lambda net: resnet.fully_connected(net, outdim=4)}
+final_layer_types = {'2labels': lambda net: resnet.fully_connected(net, outdim=2),
+                     '4labels': lambda net: resnet.fully_connected(net, outdim=4)}
 
 def single_gpu_train():
     log = maybe_load_logfile()
@@ -221,7 +220,7 @@ def single_gpu_train():
                                             augmentations=augmentations)
 
     net = resnet.inference(xplaceholder, FLAGS.architecture)
-    logits = final_layer_types[FLAGS.label_f](net)
+    logits = final_layer_types[FLAGS.task](net)
     loss = resnet.loss(logits, yplaceholder)
     global_step = tf.get_variable(
         'global_step', [],
@@ -307,7 +306,7 @@ def multi_gpu_train():
                                                            stride=FLAGS.stride,
                                                            batch_size=FLAGS.batch_size / FLAGS.num_gpus,
                                                            frac_data=FLAGS.frac_data,
-                                                           label_f=label_functions[FLAGS.label_f])
+                                                           label_f=label_functions[FLAGS.task])
 
         it = train_iter()
         num_iterations = num_examples * FLAGS.num_epochs / FLAGS.batch_size
