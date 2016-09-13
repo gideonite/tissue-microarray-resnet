@@ -6,6 +6,7 @@ import numpy as np
 
 import resnet
 import cedars_sinai_train as train
+# TODO delete cedars_sinai_etl
 import cedars_sinai_etl2 as etl
 import cv2
 
@@ -55,7 +56,6 @@ def main(_):
     l,w,h = images[0].shape
     for img_idx, img in enumerate(images): # ~ 4 sec. / img
         start = time.time()
-        # mask = np.empty([l-patch_size*2, w-patch_size*2, 1])
         mask = []
         patches = etl._patches(img, patch_size, 1) 
         for batch in chunks(patches, FLAGS.batch_size):
