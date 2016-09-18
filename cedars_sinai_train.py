@@ -202,15 +202,21 @@ final_layer_types = {'2labels': lambda net: resnet.fully_connected(net, outdim=2
                      'fraclabels': lambda net: resnet.fully_connected(net, outdim=4)
 }
 
-losses = {'2labels': resnet.loss, # TODO s/loss/categorical_loss/
+task2losses = {'2labels': resnet.loss, # TODO s/loss/categorical_loss/
           '4labels': resnet.loss,
           'fraclabels': resnet.regression_loss
 }
 
 evalops = {'2labels': lambda logits, placeholder: tf.nn.in_top_k(logits, yplaceholder, 1),
            '4labels': lambda logits, placeholder: tf.nn.in_top_k(logits, yplaceholder, 1),
-           'fraclabels':lambda logits, placeholder: placeholder - logits # residual
+           'fraclabels':lambda logits, placeholder: 1 - tf.abs(placeholder - logits) # residual
 }
+
+def get_yplaceholder():
+    if FLAGS.task == 'fraclabels':
+        return tf.placeholder(tf.float32, shape=(None,4), name='yplaceholder')
+    else:
+        return tf.placeholder(tf.int64, shape=(None), name='yplaceholder')
 
 def single_gpu_train():
     log = maybe_load_logfile()
@@ -218,7 +224,7 @@ def single_gpu_train():
     num_channels = 3
     
     xplaceholder = tf.placeholder(tf.float32, shape=(None, FLAGS.patch_size, FLAGS.patch_size, num_channels), name='xplaceholder')
-    yplaceholder = tf.placeholder(tf.int64, shape=(None), name='yplaceholder')
+    yplaceholder = get_yplaceholder()
 
     if FLAGS.augmentations == '':
         augmentations = []
@@ -228,18 +234,16 @@ def single_gpu_train():
     num_examples, train_iter = etl.dataset(patch_size=FLAGS.patch_size,
                                             stride=FLAGS.stride,
                                             batch_size=FLAGS.batch_size,
-                                            label_f=etl.center_pixel,
+                                            label_f=label_functions[FLAGS.task],
                                             augmentations=augmentations)
 
     net = resnet.inference(xplaceholder, FLAGS.architecture)
     logits = final_layer_types[FLAGS.task](net)
-    loss = losses[FLAGS.task](logits, yplaceholder)
+    loss = task2losses[FLAGS.task](logits, yplaceholder)
     global_step = tf.get_variable(
         'global_step', [],
         initializer=tf.constant_initializer(0), trainable=False)
     train_step = optimizer.minimize(loss, global_step=global_step)
-    top_k_op = tf.nn.in_top_k(logits, yplaceholder, 1)
-
     evalop = evalops[FLAGS.task](logits, yplaceholder)
 
     sess = tf.Session()

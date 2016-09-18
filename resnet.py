@@ -157,7 +157,6 @@ architectures = {'10_layers': [BottleneckGroup(3,128,32)], # TODO hack
 }
 
 def regression_loss(preds, truths):
-    import pdb; pdb.set_trace()
     return tf.nn.l2_loss(preds - truths)
 
 def loss(logits, labels):

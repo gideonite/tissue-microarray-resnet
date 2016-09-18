@@ -130,7 +130,7 @@ def minidata(patch_size, stride, batch_size, augmentations, label_f):
 
     def iter():
         while True:
-            yield np.array([xpatch for i in range(batch_size)]),
+            yield np.array([xpatch for i in range(batch_size)]),\
                   np.squeeze(np.array([label_f(ypatch) for i in range(batch_size)]))
 
     return 1, iter
