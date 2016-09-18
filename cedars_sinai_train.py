@@ -199,7 +199,17 @@ label_functions = {'2labels': lambda patch: etl.collapse_classes(etl.center_pixe
 
 final_layer_types = {'2labels': lambda net: resnet.fully_connected(net, outdim=2),
                      '4labels': lambda net: resnet.fully_connected(net, outdim=4),
-                     'fraclabels': lambda net: resnet.fraclabels # TODO rename
+                     'fraclabels': lambda net: resnet.fully_connected(net, outdim=4)
+}
+
+losses = {'2labels': resnet.loss, # TODO s/loss/categorical_loss/
+          '4labels': resnet.loss,
+          'fraclabels': resnet.regression_loss
+}
+
+evalops = {'2labels': lambda logits, placeholder: tf.nn.in_top_k(logits, yplaceholder, 1),
+           '4labels': lambda logits, placeholder: tf.nn.in_top_k(logits, yplaceholder, 1),
+           'fraclabels':lambda logits, placeholder: placeholder - logits # residual
 }
 
 def single_gpu_train():
@@ -223,12 +233,14 @@ def single_gpu_train():
 
     net = resnet.inference(xplaceholder, FLAGS.architecture)
     logits = final_layer_types[FLAGS.task](net)
-    loss = resnet.loss(logits, yplaceholder)
+    loss = losses[FLAGS.task](logits, yplaceholder)
     global_step = tf.get_variable(
         'global_step', [],
         initializer=tf.constant_initializer(0), trainable=False)
     train_step = optimizer.minimize(loss, global_step=global_step)
     top_k_op = tf.nn.in_top_k(logits, yplaceholder, 1)
+
+    evalop = evalops[FLAGS.task](logits, yplaceholder)
 
     sess = tf.Session()
     init = tf.initialize_all_variables()
@@ -240,11 +252,11 @@ def single_gpu_train():
     for iter_num in xrange(FLAGS.num_epochs * num_examples):
         start_time = time.time()
         xbatch, ybatch = next(it)
-        _, batch_loss, topk, preds = sess.run([train_step, loss, top_k_op, logits],
+        _, _, evaluation, _ = sess.run([train_step, loss, evalop, logits],
                                               feed_dict={xplaceholder: xbatch, yplaceholder: ybatch})
         duration = time.time() - start_time
         
-        train_acc = np.average(topk)
+        train_acc = np.average(evaluation)
         log['train_accs'].append((iter_num, str(train_acc)))
         print('iter: %d train acc: %0.2f examples/sec: %0.2f'
             %(iter_num, train_acc, FLAGS.batch_size / duration))
