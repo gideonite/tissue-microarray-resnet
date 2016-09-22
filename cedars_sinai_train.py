@@ -199,12 +199,14 @@ label_functions = {'2labels': lambda patch: etl.collapse_classes(etl.center_pixe
 
 final_layer_types = {'2labels': lambda net: resnet.fully_connected(net, outdim=2),
                      '4labels': lambda net: resnet.fully_connected(net, outdim=4),
-                     'fraclabels': lambda net: resnet.fully_connected(net, outdim=4)
+                     # 'fraclabels': lambda net: resnet.fully_connected(net, outdim=4)
+                     'fraclabels': lambda net: tf.nn.relu(resnet.fully_connected(net, outdim=4))
 }
 
 task2losses = {'2labels': resnet.loss, # TODO s/loss/categorical_loss/
           '4labels': resnet.loss,
-          'fraclabels': resnet.regression_loss
+          # 'fraclabels': resnet.regression_loss
+          'fraclabels': resnet.kl_divergence
 }
 
 evalops = {'2labels': lambda logits, placeholder: tf.nn.in_top_k(logits, yplaceholder, 1),
