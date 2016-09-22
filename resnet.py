@@ -166,3 +166,9 @@ def loss(logits, labels):
     tf.add_to_collection('losses', cross_entropy_mean)
 
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
+
+def kl_divergence(preds, truths):
+    cross_entropy = -tf.reduce_sum(truths*tf.log(preds))
+    entropy = -tf.reduce_sum(truths*tf.log(truths+0.00001))
+    kl_div = cross_entropy - entropy
+    return kl_div
